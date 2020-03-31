@@ -25,7 +25,9 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def api_client(request):
     base_url = request.config.getoption("--url")
-    return client.APIClient(base_url=base_url)
+    delay = request.config.getoption("--delay")
+    templates = constants.EndpointTemplates
+    return client.APIClient(base_url=base_url, delay=delay, templates=templates)
 
 
 @pytest.fixture(scope='session')

@@ -1,4 +1,7 @@
+from collections import namedtuple
+
 DEFAULT_URL = 'https://api.openbrewerydb.org/'
+
 DEFAULT_REQUEST_DELAY = 1
 
 BREWERY_TYPES = [
@@ -17,3 +20,16 @@ USA_STATES = [
     "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah",
     "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
 ]
+
+
+class EndpointTemplates:
+    Templates = namedtuple('Templates', ('field_name, template'))
+
+    type = Templates('brewery_type', 'breweries?by_type={}')
+    city = Templates('city', 'breweries?by_city={}')
+    name = Templates('name', 'breweries?by_name={}')
+    tag = Templates('tag_list', 'breweries?by_tag={}')
+    tags = Templates('tag_list', 'breweries?by_tags={}')
+    state = Templates('state', 'breweries?by_state={}')
+    code = Templates('postal_code', 'breweries?by_postal={}')
+    id = Templates('id', 'breweries/{}')
