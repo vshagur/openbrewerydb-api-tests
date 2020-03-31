@@ -4,6 +4,10 @@ DEFAULT_URL = 'https://api.openbrewerydb.org/'
 
 DEFAULT_REQUEST_DELAY = 1
 
+DEFAULT_NUMBER_PER_PAGE = 20
+
+MAX_NUMBER_PER_PAGE = 50
+
 BREWERY_TYPES = [
     'micro', 'regional', 'brewpub', 'large', 'planning', 'bar', 'contract', 'proprietor'
 ]
@@ -33,3 +37,4 @@ class EndpointTemplates:
     state = Templates('state', 'breweries?by_state={}')
     code = Templates('postal_code', 'breweries?by_postal={}')
     id = Templates('id', 'breweries/{}')
+    per_page = Templates(None, 'breweries?per_page={}')

@@ -59,6 +59,7 @@ class TestFilteredResponse:
     def is_all_fields_valid(self, field_name, response, func):
         """Returns True if the call of function func on all elements of the fields
         returns True."""
+
         fields = [item[field_name] for item in response.json()]
         return all(map(func, (field for field in fields)))
 
@@ -195,3 +196,30 @@ class TestFilteredResponse:
         assert self.is_all_fields_valid(
             field_name, response, lambda x: x == value.replace('_', '-')
         )
+
+
+@pytest.mark.parametrize('number', (0, 1, 2, 19, 20, 21, 49, 50))
+def test_number_elements_per_page(api_client, number):
+    """checking the number of elements per page"""
+
+    endpoint = constants.EndpointTemplates.per_page.template.format(number)
+    response = api_client.get(endpoint)
+    assert len(response.json()) == number
+
+
+@pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1))
+def test_number_elements_per_page_negative_value(api_client, number):
+    """checking the number of elements per page (negative values)"""
+
+    endpoint = constants.EndpointTemplates.per_page.template.format(number)
+    response = api_client.get(endpoint)
+    assert len(response.json()) == constants.DEFAULT_NUMBER_PER_PAGE
+
+
+@pytest.mark.parametrize('number', (51, 100, 1000))
+def test_number_elements_per_page_negative_value(api_client, number):
+    """checking the number of elements per page (value > 50)"""
+
+    endpoint = constants.EndpointTemplates.per_page.template.format(number)
+    response = api_client.get(endpoint)
+    assert len(response.json()) == constants.MAX_NUMBER_PER_PAGE
