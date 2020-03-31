@@ -14,6 +14,8 @@ BREWERY_TYPES = [
 
 TAGS = ['dog-friendly', 'patio', 'food-service', 'food-truck', 'tours']
 
+COUNTRIES = ["United States", ]
+
 USA_STATES = [
     "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
     "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois",
