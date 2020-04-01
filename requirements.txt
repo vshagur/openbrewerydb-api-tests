@@ -1,3 +1,4 @@
 marshmallow==3.5.1
 pytest==5.4.1
 requests==2.23.0
+pytest-html==2.1.1

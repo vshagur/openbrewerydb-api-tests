@@ -2,7 +2,7 @@ from collections import namedtuple
 
 DEFAULT_URL = 'https://api.openbrewerydb.org/'
 
-DEFAULT_REQUEST_DELAY = 1
+DEFAULT_REQUEST_DELAY = 0.1
 
 DEFAULT_NUMBER_PER_PAGE = 20
 

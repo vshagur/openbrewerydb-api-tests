@@ -1,0 +1,2310 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 01-Apr-2020 at 11:34:14 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>JAVA_HOME</td>
+        <td>/usr/lib/jvm/java-8-oracle</td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.8.1", "pytest": "5.4.1"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Linux-4.9.0-8-amd64-x86_64-with-debian-9.11</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "2.1.1", "metadata": "1.8.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.6</td></tr></table>
+    <h2>Summary</h2>
+    <p>226 tests ran in 144.47 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">198 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">28 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestGetResponse object at 0x7f3657601550&gt;, response = &lt;Response [200]&gt;<br/>field_validator = &lt;BrewerySchema(many=False)&gt;<br/><br/>    def test_responses_format(self, response, field_validator):<br/>        &quot;&quot;&quot;check responses format&quot;&quot;&quot;<br/>    <br/>        for brewery_data in response.json():<br/>            errors = field_validator.validate(brewery_data)<br/>&gt;           assert not errors, f&#x27;Data format error: {errors}\nData: {brewery_data}\n&#x27;<br/><span class="error">E           AssertionError: Data format error: {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><span class="error">E             Data: {&#x27;id&#x27;: 4631, &#x27;name&#x27;: &#x27;Brewery in Planning - New York&#x27;, &#x27;brewery_type&#x27;: &#x27;planning&#x27;, &#x27;street&#x27;: &#x27;&#x27;, &#x27;city&#x27;: &#x27;New York&#x27;, &#x27;state&#x27;: &#x27;New York&#x27;, &#x27;postal_code&#x27;: &#x27;TBD&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;longitude&#x27;: None, &#x27;latitude&#x27;: None, &#x27;phone&#x27;: &#x27;&#x27;, &#x27;website_url&#x27;: &#x27;&#x27;, &#x27;updated_at&#x27;: &#x27;2018-08-11T21:38:31.263Z&#x27;, &#x27;tag_list&#x27;: []}</span><br/><span class="error">E             </span><br/><span class="error">E           assert not {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:55: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Rochester]</td>
+          <td class="col-duration">1.09</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657550550&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Rochester&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Rochester&#x27;, &#x27;Saint Clair Shores&#x27;, &#x27;South Lyon&#x27;, &#x27;Lino Lakes&#x27;, &#x27;Maple Grove&#x27;,<br/>         &#x27;Manassas&#x27;, &#x27;Winchester&#x27;, &#x27;Arrington&#x27;,))<br/>    def test_filter_by_city_percent_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (percent coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = urllib.parse.quote(value.lower())<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657550550&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_percent_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365752d158&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657550550&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657550550&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:84: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Winchester]</td>
+          <td class="col-duration">0.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755f278&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Winchester&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Rochester&#x27;, &#x27;Saint Clair Shores&#x27;, &#x27;South Lyon&#x27;, &#x27;Lino Lakes&#x27;, &#x27;Maple Grove&#x27;,<br/>         &#x27;Manassas&#x27;, &#x27;Winchester&#x27;, &#x27;Arrington&#x27;,))<br/>    def test_filter_by_city_percent_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (percent coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = urllib.parse.quote(value.lower())<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755f278&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_percent_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365752da60&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755f278&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755f278&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:84: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Arrington]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657562a58&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Arrington&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Rochester&#x27;, &#x27;Saint Clair Shores&#x27;, &#x27;South Lyon&#x27;, &#x27;Lino Lakes&#x27;, &#x27;Maple Grove&#x27;,<br/>         &#x27;Manassas&#x27;, &#x27;Winchester&#x27;, &#x27;Arrington&#x27;,))<br/>    def test_filter_by_city_percent_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (percent coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = urllib.parse.quote(value.lower())<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657562a58&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_percent_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365752db70&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657562a58&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f3657562a58&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:84: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Pisgah Forest]</td>
+          <td class="col-duration">0.96</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574ecc88&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Pisgah Forest&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Pisgah Forest&#x27;, &#x27;Winston Salem&#x27;, &#x27;Bay Shore&#x27;, &#x27;New York&#x27;, &#x27;Ballston Lake&#x27;,<br/>         &#x27;Rocky Point&#x27;, &#x27;Elizaville&#x27;, &#x27;Greensboro&#x27;,))<br/>    def test_filter_by_city_underline_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (underline coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = value.lower().replace(&#x27; &#x27;, &#x27;_&#x27;)<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574ecc88&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_underline_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365756b048&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574ecc88&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574ecc88&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:96: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Winston Salem]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574fb0f0&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Winston Salem&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Pisgah Forest&#x27;, &#x27;Winston Salem&#x27;, &#x27;Bay Shore&#x27;, &#x27;New York&#x27;, &#x27;Ballston Lake&#x27;,<br/>         &#x27;Rocky Point&#x27;, &#x27;Elizaville&#x27;, &#x27;Greensboro&#x27;,))<br/>    def test_filter_by_city_underline_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (underline coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = value.lower().replace(&#x27; &#x27;, &#x27;_&#x27;)<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574fb0f0&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_underline_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365756b0d0&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574fb0f0&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f36574fb0f0&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:96: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Greensboro]</td>
+          <td class="col-duration">1.08</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755fdd8&gt;<br/>api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, value = &#x27;Greensboro&#x27;<br/><br/>    @pytest.mark.parametrize(<br/>        &#x27;value&#x27;,<br/>        (&#x27;Pisgah Forest&#x27;, &#x27;Winston Salem&#x27;, &#x27;Bay Shore&#x27;, &#x27;New York&#x27;, &#x27;Ballston Lake&#x27;,<br/>         &#x27;Rocky Point&#x27;, &#x27;Elizaville&#x27;, &#x27;Greensboro&#x27;,))<br/>    def test_filter_by_city_underline_coding_url(self, api_client, value):<br/>        &quot;&quot;&quot;check filtering by city (underline coding url)&quot;&quot;&quot;<br/>    <br/>        new_value = value.lower().replace(&#x27; &#x27;, &#x27;_&#x27;)<br/>        field_name = constants.EndpointTemplates.city.field_name<br/>        response = api_client.get_filter_by(&#x27;city&#x27;, new_value)<br/>&gt;       assert self.is_all_fields_valid(field_name, response, lambda x: x == value)<br/><span class="error">E       AssertionError: assert False</span><br/><span class="error">E        +  where False = &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755fdd8&gt;&gt;(&#x27;city&#x27;, &lt;Response [200]&gt;, &lt;function TestFilteredResponse.test_filter_by_city_underline_coding_url.&lt;locals&gt;.&lt;lambda&gt; at 0x7f365752dd08&gt;)</span><br/><span class="error">E        +    where &lt;bound method TestFilteredResponse.is_all_fields_valid of &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755fdd8&gt;&gt; = &lt;openbrewerydb_api_tests.test_openbrewerydb_api.TestFilteredResponse object at 0x7f365755fdd8&gt;.is_all_fields_valid</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:96: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-id-+]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;id&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       assert [286, 430, 57...47, 1059, ...] == [1123, 1059, ...573, 430, ...]</span><br/><span class="error">E         At index 0 diff: 286 != 1123</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-id--]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;id&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       assert [1170, 1123, ...96, 1094, ...] == [930, 932, 93...951, 963, ...]</span><br/><span class="error">E         At index 0 diff: 1170 != 930</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-name-+]</td>
+          <td class="col-duration">0.63</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;name&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;Abnormal Be...Station&#x27;, ...] == [&#x27;Thunderhawk...n Diego&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;Abnormal Beer Company&#x27; != &#x27;Thunderhawk Alements&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-name--]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;name&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;White Labs ...Company&#x27;, ...] == [&#x27;Protector B...Brewing&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;White Labs Tasting Room&#x27; != &#x27;Protector Brewery&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-brewery_type-+]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;brewery_type&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;micro&#x27;, &#x27;pl...brewpub&#x27;, ...] == [&#x27;regional&#x27;, ... &#x27;micro&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;micro&#x27; != &#x27;regional&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-brewery_type--]</td>
+          <td class="col-duration">0.63</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;brewery_type&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;regional&#x27;, ...lanning&#x27;, ...] == [&#x27;micro&#x27;, &#x27;mi... &#x27;micro&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;regional&#x27; != &#x27;micro&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-street-+]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;street&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;16990 Via T...Ste 100&#x27;, ...] == [&#x27;9990 Alesmi...Ste 100&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;16990 Via Tazon Ste 123&#x27; != &#x27;9990 Alesmith Ct&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-street--]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;street&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;Societe Bre...ion Ave&#x27;, ...] == [&#x27;8655 Produc...d Ste D&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;Societe Brewing Company 8262 Clairemont Mesa Blvd&#x27; != &#x27;8655 Production Ave Ste A&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-postal_code-+]</td>
+          <td class="col-duration">1.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;postal_code&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;92127-1649&#x27;...06-6164&#x27;, ...] == [&#x27;92127-1649&#x27;...26-4200&#x27;, ...]</span><br/><span class="error">E         At index 1 diff: &#x27;92121-4396&#x27; != &#x27;92126-6391&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-postal_code--]</td>
+          <td class="col-duration">1.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;postal_code&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;92131-1058&#x27;...26-6507&#x27;, ...] == [&#x27;92121-4100&#x27;...26-4200&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;92131-1058&#x27; != &#x27;92121-4100&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-longitude-]</td>
+          <td class="col-duration">1.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;&#x27;, field = &#x27;longitude&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;-117.255265....230519&#x27;, ...] == [&#x27;-117.162771...3259846&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;-117.255265&#x27; != &#x27;-117.1627714&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-longitude-+]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;longitude&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;-117.08575&#x27;...7.21157&#x27;, ...] == [&#x27;-117.251117....157081&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;-117.08575&#x27; != &#x27;-117.2511178&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-latitude-+]</td>
+          <td class="col-duration">1.08</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;latitude&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;33.02391&#x27;, ...7405237&#x27;, ...] == [&#x27;33.02391&#x27;, ...8085346&#x27;, ...]</span><br/><span class="error">E         At index 1 diff: &#x27;32.7174209&#x27; != &#x27;32.912641&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-phone-+]</td>
+          <td class="col-duration">1.27</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;phone&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;8586182463&#x27;...2692200&#x27;, ...] == [&#x27;8588882188&#x27;...4805437&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;8586182463&#x27; != &#x27;8588882188&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-phone--]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;phone&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;9165551212&#x27;...7521924&#x27;, ...] == [&#x27;8585499888&#x27;...6182463&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;9165551212&#x27; != &#x27;8585499888&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-website_url-+]</td>
+          <td class="col-duration">1.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;website_url&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;http://abno...ion.com&#x27;, ...] == [&#x27;http://www....ing.com&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;http://abnormalbeer.co&#x27; != &#x27;http://www.thebarnbrew.com&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-website_url--]</td>
+          <td class="col-duration">1.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;website_url&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;http://www....ing.com&#x27;, ...] == [&#x27;http://www....ing.com&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;http://www.whitelabs.com&#x27; != &#x27;http://www.pizzaport.com&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-updated_at-+]</td>
+          <td class="col-duration">1.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;+&#x27;, field = &#x27;updated_at&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;2018-08-23T...14.354Z&#x27;, ...] == [&#x27;2018-08-24T...06.455Z&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;2018-08-23T23:24:00.025Z&#x27; != &#x27;2018-08-24T00:04:11.527Z&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-updated_at--]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;updated_at&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>        fields = [item[field] for item in response.json() if item[field]]<br/>&gt;       assert fields == sorted(fields, reverse=reverse)<br/><span class="error">E       AssertionError: assert [&#x27;2018-08-24T...45.154Z&#x27;, ...] == [&#x27;2018-08-24T...16.088Z&#x27;, ...]</span><br/><span class="error">E         At index 0 diff: &#x27;2018-08-24T00:04:52.152Z&#x27; != &#x27;2018-08-24T00:00:37.852Z&#x27;</span><br/><span class="error">E         Use -v to get the full diff</span><br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:236: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-tag_list-]</td>
+          <td class="col-duration">0.68</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;&#x27;, field = &#x27;tag_list&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>&gt;       fields = [item[field] for item in response.json() if item[field]]<br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:235: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>.env/lib/python3.6/site-packages/requests/models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>/usr/local/lib/python3.6/json/__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>/usr/local/lib/python3.6/json/decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x7f3658ac7128&gt;, s = &#x27;&#x27;, idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>/usr/local/lib/python3.6/json/decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-tag_list--]</td>
+          <td class="col-duration">0.66</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">api_client = &lt;openbrewerydb_api_tests.client.APIClient object at 0x7f3657c39a90&gt;, sign = &#x27;-&#x27;, field = &#x27;tag_list&#x27;<br/>endpoint = &#x27;breweries?by_city=san_diego&#x27;<br/><br/>    @pytest.mark.parametrize(&#x27;sign&#x27;, [&#x27;&#x27;, &#x27;+&#x27;, &#x27;-&#x27;])<br/>    @pytest.mark.parametrize(&#x27;field&#x27;, constants.FIELD_NAMES)<br/>    @pytest.mark.parametrize(&#x27;endpoint&#x27;,[&#x27;breweries?by_city=san_diego&#x27;,])<br/>    def test_field_sorting(api_client, sign, field, endpoint):<br/>        &quot;&quot;&quot;check sorting&quot;&quot;&quot;<br/>    <br/>        reverse = True if sign == &#x27;+&#x27; else False<br/>        response = api_client.get(f&#x27;{endpoint}&amp;sort={sign}{field}&#x27;)<br/>&gt;       fields = [item[field] for item in response.json() if item[field]]<br/><br/>openbrewerydb_api_tests/test_openbrewerydb_api.py:235: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>.env/lib/python3.6/site-packages/requests/models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>/usr/local/lib/python3.6/json/__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>/usr/local/lib/python3.6/json/decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x7f3658ac7128&gt;, s = &#x27;&#x27;, idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>/usr/local/lib/python3.6/json/decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_city=san%20diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_city=san%20diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_city=san%20diego]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_postal=44107-4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_postal=44107-4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_postal=44107-4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_postal=44107_4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_postal=44107_4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_postal=44107_4020]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_type=micro]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?per_page=25]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_state=ohio&amp;sort=type,-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_state=ohio&amp;sort=type,-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_state=ohio&amp;sort=type,-name]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_response_code[breweries?by_city=san_diego&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_headers_content_type[breweries?by_city=san_diego&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestGetResponse::test_responses_format[breweries?by_city=san_diego&amp;sort=-name]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[micro]</td>
+          <td class="col-duration">1.19</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[regional]</td>
+          <td class="col-duration">1.16</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[brewpub]</td>
+          <td class="col-duration">1.09</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[large]</td>
+          <td class="col-duration">1.07</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[planning]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[bar]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[contract]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_type[proprietor]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Saint Clair Shores]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[South Lyon]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Lino Lakes]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Maple Grove]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_percent_coding_url[Manassas]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Bay Shore]</td>
+          <td class="col-duration">0.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[New York]</td>
+          <td class="col-duration">0.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Ballston Lake]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Rocky Point]</td>
+          <td class="col-duration">1.06</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_city_underline_coding_url[Elizaville]</td>
+          <td class="col-duration">0.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[big]</td>
+          <td class="col-duration">0.63</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[brewery]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[company0]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[beer company]</td>
+          <td class="col-duration">0.71</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[red truck beer]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[company1]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_underline_coding_url[beer]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[city food]</td>
+          <td class="col-duration">0.61</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[granite city food]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[restaurant]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[gordon biersch]</td>
+          <td class="col-duration">1.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[west]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[northwest]</td>
+          <td class="col-duration">0.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_name_percent_coding_url[washington]</td>
+          <td class="col-duration">0.61</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tag[dog-friendly]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tag[patio]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tag[food-service]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tag[food-truck]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tag[tours]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Alabama]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Arizona]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[California]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Connecticut]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Florida]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Hawaii]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Illinois]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Iowa]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Kentucky]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Maine]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Massachusetts]</td>
+          <td class="col-duration">1.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Minnesota]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Missouri]</td>
+          <td class="col-duration">0.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Nebraska]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[New Hampshire]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[New Mexico]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[North Carolina]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Ohio]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Oregon]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Rhode Island]</td>
+          <td class="col-duration">5.66</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[South Dakota]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Texas]</td>
+          <td class="col-duration">1.15</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Vermont]</td>
+          <td class="col-duration">1.06</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Washington]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_percent_coding_url[Wisconsin]</td>
+          <td class="col-duration">1.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Alaska]</td>
+          <td class="col-duration">0.64</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Arkansas]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Colorado]</td>
+          <td class="col-duration">1.09</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Delaware]</td>
+          <td class="col-duration">1.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Georgia]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Idaho]</td>
+          <td class="col-duration">1.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Indiana]</td>
+          <td class="col-duration">1.08</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Kansas]</td>
+          <td class="col-duration">1.17</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Louisiana]</td>
+          <td class="col-duration">1.04</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Maryland]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Michigan]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Mississippi]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Montana]</td>
+          <td class="col-duration">0.65</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Nevada]</td>
+          <td class="col-duration">1.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[New Jersey]</td>
+          <td class="col-duration">0.71</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[New York]</td>
+          <td class="col-duration">1.17</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[North Dakota]</td>
+          <td class="col-duration">0.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Oklahoma]</td>
+          <td class="col-duration">1.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Pennsylvania]</td>
+          <td class="col-duration">0.67</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[South Carolina]</td>
+          <td class="col-duration">0.64</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Tennessee]</td>
+          <td class="col-duration">1.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Utah]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Virginia]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[West Virginia]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_state_underline_coding_url[Wyoming]</td>
+          <td class="col-duration">0.69</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[dog-friendly-patio]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[dog-friendly-food-service]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[dog-friendly-food-truck]</td>
+          <td class="col-duration">0.94</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[dog-friendly-tours]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[patio-food-service]</td>
+          <td class="col-duration">0.98</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[patio-food-truck]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[patio-tours]</td>
+          <td class="col-duration">0.46</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[food-service-food-truck]</td>
+          <td class="col-duration">0.47</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[food-service-tours]</td>
+          <td class="col-duration">0.95</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_tags[food-truck-tours]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[44107]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[49286]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[95565]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[55746]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[55369]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[82801]</td>
+          <td class="col-duration">0.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[16335]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_basic_postal_code[15301]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[44107-4840]</td>
+          <td class="col-duration">0.95</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[49286-1553]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[55746-1713]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[55369-3629]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[82801-3619]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[16335-3432]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code[15301-4912]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[44107_4840]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[49286_1553]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[55746_1713]</td>
+          <td class="col-duration">0.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[55369_3629]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[82801_3619]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[16335_3432]</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestFilteredResponse::test_filter_by_postal_code_underline[15301_4912]</td>
+          <td class="col-duration">1.08</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[0]</td>
+          <td class="col-duration">0.51</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[1]</td>
+          <td class="col-duration">0.48</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[2]</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[19]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[20]</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[21]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[49]</td>
+          <td class="col-duration">0.69</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page[50]</td>
+          <td class="col-duration">0.87</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page_negative_value[51]</td>
+          <td class="col-duration">0.72</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page_negative_value[100]</td>
+          <td class="col-duration">0.77</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::TestNumberPerPage::test_number_elements_per_page_negative_value[1000]</td>
+          <td class="col-duration">0.84</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-id-]</td>
+          <td class="col-duration">0.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-name-]</td>
+          <td class="col-duration">0.64</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-brewery_type-]</td>
+          <td class="col-duration">0.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-street-]</td>
+          <td class="col-duration">0.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-city-]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-city-+]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-city--]</td>
+          <td class="col-duration">0.64</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-state-]</td>
+          <td class="col-duration">0.61</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-state-+]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-state--]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-postal_code-]</td>
+          <td class="col-duration">1.20</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-country-]</td>
+          <td class="col-duration">1.09</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-country-+]</td>
+          <td class="col-duration">1.29</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-country--]</td>
+          <td class="col-duration">0.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-longitude--]</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-latitude-]</td>
+          <td class="col-duration">1.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-latitude--]</td>
+          <td class="col-duration">1.27</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-phone-]</td>
+          <td class="col-duration">0.65</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-website_url-]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-updated_at-]</td>
+          <td class="col-duration">1.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/test_openbrewerydb_api.py::test_field_sorting[breweries?by_city=san_diego-tag_list-+]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>
