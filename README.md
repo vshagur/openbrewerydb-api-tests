@@ -1,4 +1,4 @@
-# test-openbrewerydb-api
+# openbrewerydb-api-tests
 Test suite for Open Brewery DB API (https://www.openbrewerydb.org/).
 
 #### Installation
@@ -14,8 +14,6 @@ Test suite for Open Brewery DB API (https://www.openbrewerydb.org/).
 
 Keys: 
 
-"--delay" - the delay between requests to the server, 
-
-"--html" - the file with test results, 
-
-"--url" - the base URL
+    --delay - the delay between requests to the server,     
+    --html - the file with test results, 
+    --url - the base URL (you can run tests on a local server)
