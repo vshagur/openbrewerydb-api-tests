@@ -8,6 +8,11 @@ DEFAULT_NUMBER_PER_PAGE = 20
 
 MAX_NUMBER_PER_PAGE = 50
 
+FIELD_NAMES = [
+    'id', 'name', 'brewery_type', 'street', 'city', 'state', 'postal_code', 'country',
+    'longitude', 'latitude', 'phone', 'website_url', 'updated_at', 'tag_list'
+]
+
 BREWERY_TYPES = [
     'micro', 'regional', 'brewpub', 'large', 'planning', 'bar', 'contract', 'proprietor'
 ]

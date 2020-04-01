@@ -222,3 +222,15 @@ class TestNumberPerPage:
         endpoint = constants.EndpointTemplates.per_page.template.format(number)
         response = api_client.get(endpoint)
         assert len(response.json()) == constants.MAX_NUMBER_PER_PAGE
+
+
+@pytest.mark.parametrize('sign', ['', '+', '-'])
+@pytest.mark.parametrize('field', constants.FIELD_NAMES)
+@pytest.mark.parametrize('endpoint', ['breweries?by_city=san_diego', ])
+def test_field_sorting(api_client, sign, field, endpoint):
+    """check sorting"""
+
+    reverse = True if sign == '+' else False
+    response = api_client.get(f'{endpoint}&sort={sign}{field}')
+    fields = [item[field] for item in response.json() if item[field]]
+    assert fields == sorted(fields, reverse=reverse)
