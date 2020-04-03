@@ -12,7 +12,7 @@ from openbrewerydb_api_tests import constants as CONST
 
 
 class TestGetResponse:
-    ENDPOINTS = [
+    endpoints = [
         'breweries?by_city=san_diego',
         'breweries?by_city=san%20diego',
         'breweries?by_name=cooper',
@@ -25,13 +25,15 @@ class TestGetResponse:
         'breweries?by_postal=44107_4020',
         'breweries?by_type=micro',
         'breweries?by_tag=patio',
+        'breweries?by_tags=patio,dog-friendly',
         'breweries?page=15',
         'breweries?per_page=25',
         'breweries?by_state=ohio&sort=type,-name',
         'breweries?by_city=san_diego&sort=-name',
+        'breweries/search?query=dog',
     ]
 
-    @pytest.fixture(scope='class', params=ENDPOINTS)
+    @pytest.fixture(scope='class', params=endpoints)
     def response(self, api_client, request):
         """return response"""
 
