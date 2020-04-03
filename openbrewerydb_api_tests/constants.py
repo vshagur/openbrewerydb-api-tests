@@ -25,6 +25,14 @@ class EndpointTemplates:
     code = Templates('postal_code', 'breweries?by_postal={}')
     id = Templates('id', 'breweries/{}')
     per_page = Templates(None, 'breweries?per_page={}')
+    single_brewery = Templates(None, 'breweries/{}')
+    # the following attributes do not have patterns, but may be added soon
+    country = Templates('country', None)
+    street = Templates('street', None)
+    longitude = Templates('longitude', None)
+    latitude = Templates('latitude', None)
+    website = Templates('website_url', None)
+    phone = Templates('phone', None)
 
 
 # =======================================================================================

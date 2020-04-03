@@ -1,5 +1,6 @@
 import urllib.parse
 from itertools import combinations
+from random import choices
 
 import pytest
 
@@ -236,3 +237,56 @@ def test_field_sorting(api_client, sign, field, endpoint):
     response = api_client.get(f'{endpoint}&sort={sign}{field}')
     fields = [item[field] for item in response.json() if item[field]]
     assert fields == sorted(fields, reverse=reverse)
+
+
+class TestGetSingleBrewery:
+    param = None
+    data = None
+
+    @pytest.fixture(scope='class', params=choices(range(1, 4000), k=500))
+    def response(self, api_client, request):
+        """return response"""
+
+        TestGetSingleBrewery.param = request.param
+        template = CONST.EndpointTemplates.single_brewery.template
+        response = api_client.get(template.format(request.param))
+        TestGetSingleBrewery.data = response.json()
+        yield response
+        TestGetSingleBrewery.param = None
+        TestGetSingleBrewery.data = None
+
+    @pytest.fixture(scope='class')
+    def expected(self, db, response):
+        """return expected"""
+
+        return db.select_items('id', lambda x: x == self.param).pop()
+
+    def test_response_code(self, response):
+        """check response code"""
+
+        assert response.status_code == 200
+
+    def test_headers_content_type(self, response):
+        """check content_type"""
+
+        assert response.headers['Content-type'] == 'application/json; charset=utf-8'
+
+    @pytest.mark.parametrize('field_name', ('name', 'type', 'country', 'id'))
+    def test_required_fields(self, expected, field_name):
+        """checking values of required fields with data from a database dump"""
+
+        key = getattr(CONST.EndpointTemplates, field_name).field_name
+        assert self.data[key] == expected[key]
+
+    @pytest.mark.parametrize(
+        'field_name',
+        ('city', 'street', 'code', 'state', 'code', 'longitude', 'latitude',
+         'phone', 'website'))
+    def test_not_required_fields(self, expected, field_name):
+        """checking values of required fields with data from a database dump"""
+
+        key = getattr(CONST.EndpointTemplates, field_name).field_name
+        # handling empty values
+        expected_value = '' if expected[key] == 'Null' else expected[key]
+        value = '' if self.data[key] is None else self.data[key]
+        assert value == expected_value
