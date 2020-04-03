@@ -291,7 +291,11 @@ class TestGetSingleBrewery:
         value = '' if self.data[key] is None else self.data[key]
         assert value == expected_value
 
-    @pytest.mark.skip(reason='this field is not in the database dump')
     def test_updated_at_field(self, expected):
         """checking values of updated_field with data from a database dump"""
+        assert True  # todo write a test condition
+
+    @pytest.mark.skip(reason='this field is not in the database dump')
+    def test_tag_list_field(self, expected):
+        """checking values of tag_list with data from a database dump"""
         assert True  # todo write a test condition
