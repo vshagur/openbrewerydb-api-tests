@@ -307,7 +307,7 @@ class TestGetSingleBrewery:
 
 class TestRequestToApiWithErrors:
     @pytest.mark.parametrize('id', ('NotExistID', 10 ** 9, '_', -20))
-    def test_get_single_brewery_not_exist_id(self, api_client, id):
+    def  (self, api_client, id):
         endpoint = CONST.EndpointTemplates.single_brewery.template.format(id)
         response = api_client.get(endpoint)
         assert response.status_code == 404
