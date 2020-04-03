@@ -313,3 +313,35 @@ class TestRequestToApiWithErrors:
         assert response.status_code == 404
         assert response.json() == {'message': f"Couldn't find Brewery with 'id'={id}"}
 
+
+class TestFilteredResponseByNotExistValue:
+    @pytest.mark.parametrize(
+        'value',
+        ('microb', 'micro_micro', 'micro%20micro', 'micr', '10',))
+    def test_filter_by_type_bad_value(self, api_client, value):
+        """"""
+        endpoint = CONST.EndpointTemplates.type.template.format(value)
+        response = api_client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        ('00000', '00000-0000', '44107%2040', '44107%20%2040', '44107__2040',))
+    def test_filter_by_postal_code_bad_value(self, api_client, value):
+        """"""
+        endpoint = CONST.EndpointTemplates.code.template.format(value)
+        response = api_client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        ('new_mexic', 'new.mexico', 'newmexico', 'new%20mexic', 'ohi', 'new__mexico',
+         'new%20%20mexico'))
+    def test_filter_state_code_bad_value(self, api_client, value):
+        """"""
+        endpoint = CONST.EndpointTemplates.state.template.format(value)
+        response = api_client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json() == []
