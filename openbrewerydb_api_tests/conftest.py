@@ -2,6 +2,7 @@ import pytest
 
 from openbrewerydb_api_tests import client
 from openbrewerydb_api_tests import constants
+from openbrewerydb_api_tests import dump_db
 from openbrewerydb_api_tests import validator
 
 
@@ -33,3 +34,10 @@ def api_client(request):
 @pytest.fixture(scope='session')
 def field_validator():
     return validator.BrewerySchema()
+
+
+@pytest.fixture(scope='session')
+def db():
+    db_obj = dump_db.DumpDB()
+    db_obj.load_from_csv(constants.BACKUP_DB_PATH)
+    return db_obj
