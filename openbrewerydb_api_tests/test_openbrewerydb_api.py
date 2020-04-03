@@ -13,6 +13,8 @@ from openbrewerydb_api_tests import constants as CONST
 
 
 class TestGetResponse:
+    """checking server responses for test data from api documentation"""
+
     endpoints = [
         'breweries?by_city=san_diego',
         'breweries?by_city=san%20diego',
@@ -293,9 +295,20 @@ class TestGetSingleBrewery:
 
     def test_updated_at_field(self, expected):
         """checking values of updated_field with data from a database dump"""
+
         assert True  # todo write a test condition
 
     @pytest.mark.skip(reason='this field is not in the database dump')
     def test_tag_list_field(self, expected):
         """checking values of tag_list with data from a database dump"""
+
         assert True  # todo write a test condition
+
+
+class TestRequestToApiWithErrors:
+    @pytest.mark.parametrize('id', ('NotExistID', 10 ** 9, '_', -20))
+    def test_get_single_brewery_not_exist_id(self, api_client, id):
+        endpoint = CONST.EndpointTemplates.single_brewery.template.format(id)
+        response = api_client.get(endpoint)
+        assert response.status_code == 404
+        assert response.json() == {'message': f"Couldn't find Brewery with 'id'={id}"}
