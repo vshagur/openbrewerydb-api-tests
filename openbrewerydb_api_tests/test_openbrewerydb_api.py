@@ -3,7 +3,7 @@ from itertools import combinations
 
 import pytest
 
-from openbrewerydb_api_tests import constants
+from openbrewerydb_api_tests import constants as CONST
 
 
 # =======================================================================================
@@ -63,11 +63,11 @@ class TestFilteredResponse:
         fields = [item[field_name] for item in response.json()]
         return all(map(func, (field for field in fields)))
 
-    @pytest.mark.parametrize('value', constants.BREWERY_TYPES)
+    @pytest.mark.parametrize('value', CONST.BREWERY_TYPES)
     def test_filter_by_type(self, api_client, value):
         """check filtering by type of brewery"""
 
-        field_name = constants.EndpointTemplates.type.field_name
+        field_name = CONST.EndpointTemplates.type.field_name
         response = api_client.get_filter_by('type', value)
         assert self.is_all_fields_valid(field_name, response, lambda x: x == value)
 
@@ -79,7 +79,7 @@ class TestFilteredResponse:
         """check filtering by city (percent coding url)"""
 
         new_value = urllib.parse.quote(value.lower())
-        field_name = constants.EndpointTemplates.city.field_name
+        field_name = CONST.EndpointTemplates.city.field_name
         response = api_client.get_filter_by('city', new_value)
         assert self.is_all_fields_valid(field_name, response, lambda x: x == value)
 
@@ -91,7 +91,7 @@ class TestFilteredResponse:
         """check filtering by city (underline coding url)"""
 
         new_value = value.lower().replace(' ', '_')
-        field_name = constants.EndpointTemplates.city.field_name
+        field_name = CONST.EndpointTemplates.city.field_name
         response = api_client.get_filter_by('city', new_value)
         assert self.is_all_fields_valid(field_name, response, lambda x: x == value)
 
@@ -103,7 +103,7 @@ class TestFilteredResponse:
         """check filtering by name (underline coding url)"""
 
         new_value = value.replace(' ', '_')
-        field_name = constants.EndpointTemplates.name.field_name
+        field_name = CONST.EndpointTemplates.name.field_name
         response = api_client.get_filter_by('name', new_value)
         assert self.is_all_fields_valid(
             field_name, response, lambda x: value in x.lower())
@@ -116,43 +116,43 @@ class TestFilteredResponse:
         """check filtering by name (percent coding url)"""
 
         new_value = urllib.parse.quote(value.lower())
-        field_name = constants.EndpointTemplates.name.field_name
+        field_name = CONST.EndpointTemplates.name.field_name
         response = api_client.get_filter_by('name', new_value)
         assert self.is_all_fields_valid(
             field_name, response, lambda x: value in x.lower()
         )
 
-    @pytest.mark.parametrize('value', constants.TAGS)
+    @pytest.mark.parametrize('value', CONST.TAGS)
     def test_filter_by_tag(self, api_client, value):
         """check filtering by tag"""
 
-        field_name = constants.EndpointTemplates.tag.field_name
+        field_name = CONST.EndpointTemplates.tag.field_name
         response = api_client.get_filter_by('tag', value)
         assert self.is_all_fields_valid(field_name, response, lambda x: value in x)
 
-    @pytest.mark.parametrize('value', constants.USA_STATES[::2])
+    @pytest.mark.parametrize('value', CONST.USA_STATES[::2])
     def test_filter_by_state_percent_coding_url(self, api_client, value):
         """check filtering by state (percent coding url)"""
 
-        field_name = constants.EndpointTemplates.state.field_name
+        field_name = CONST.EndpointTemplates.state.field_name
         new_value = urllib.parse.quote(value.lower())
         response = api_client.get_filter_by('state', new_value)
         assert self.is_all_fields_valid(field_name, response, lambda x: x == value)
 
-    @pytest.mark.parametrize('value', constants.USA_STATES[1::2])
+    @pytest.mark.parametrize('value', CONST.USA_STATES[1::2])
     def test_filter_by_state_underline_coding_url(self, api_client, value):
         """check filtering by state (underline coding url)"""
 
-        field_name = constants.EndpointTemplates.state.field_name
+        field_name = CONST.EndpointTemplates.state.field_name
         new_value = value.lower().replace(' ', '_')
         response = api_client.get_filter_by('state', new_value)
         assert self.is_all_fields_valid(field_name, response, lambda x: x == value)
 
-    @pytest.mark.parametrize('value1, value2', list(combinations(constants.TAGS, 2)))
+    @pytest.mark.parametrize('value1, value2', list(combinations(CONST.TAGS, 2)))
     def test_filter_by_tags(self, api_client, value1, value2):
         """check filtering by tags"""
 
-        field_name = constants.EndpointTemplates.tags.field_name
+        field_name = CONST.EndpointTemplates.tags.field_name
         new_value = ','.join((value1, value2))
         response = api_client.get_filter_by('tags', new_value)
         assert self.is_all_fields_valid(
@@ -165,7 +165,7 @@ class TestFilteredResponse:
     def test_filter_by_basic_postal_code(self, api_client, value):
         """check filtering by basic (5 digit) postal code"""
 
-        field_name = constants.EndpointTemplates.code.field_name
+        field_name = CONST.EndpointTemplates.code.field_name
         response = api_client.get_filter_by('code', value)
         assert self.is_all_fields_valid(
             field_name, response, lambda x: x.startswith(value)
@@ -178,7 +178,7 @@ class TestFilteredResponse:
     def test_filter_by_postal_code(self, api_client, value):
         """check filtering by basic postal+4 (9 digit) """
 
-        field_name = constants.EndpointTemplates.code.field_name
+        field_name = CONST.EndpointTemplates.code.field_name
         response = api_client.get_filter_by('code', value)
         assert self.is_all_fields_valid(
             field_name, response, lambda x: x.startswith(value)
@@ -191,7 +191,7 @@ class TestFilteredResponse:
     def test_filter_by_postal_code_underline(self, api_client, value):
         """check filtering by basic postal+4 (9 digit), underline"""
 
-        field_name = constants.EndpointTemplates.code.field_name
+        field_name = CONST.EndpointTemplates.code.field_name
         response = api_client.get_filter_by('code', value)
         assert self.is_all_fields_valid(
             field_name, response, lambda x: x == value.replace('_', '-')
@@ -203,7 +203,7 @@ class TestNumberPerPage:
     def test_number_elements_per_page(self, api_client, number):
         """checking the number of elements per page"""
 
-        endpoint = constants.EndpointTemplates.per_page.template.format(number)
+        endpoint = CONST.EndpointTemplates.per_page.template.format(number)
         response = api_client.get(endpoint)
         assert len(response.json()) == number
 
@@ -211,21 +211,21 @@ class TestNumberPerPage:
     def test_number_elements_per_page_negative_value(self, api_client, number):
         """checking the number of elements per page (negative values)"""
 
-        endpoint = constants.EndpointTemplates.per_page.template.format(number)
+        endpoint = CONST.EndpointTemplates.per_page.template.format(number)
         response = api_client.get(endpoint)
-        assert len(response.json()) == constants.DEFAULT_NUMBER_PER_PAGE
+        assert len(response.json()) == CONST.DEFAULT_NUMBER_PER_PAGE
 
     @pytest.mark.parametrize('number', (51, 100, 1000))
     def test_number_elements_per_page_negative_value(self, api_client, number):
         """checking the number of elements per page (value > 50)"""
 
-        endpoint = constants.EndpointTemplates.per_page.template.format(number)
+        endpoint = CONST.EndpointTemplates.per_page.template.format(number)
         response = api_client.get(endpoint)
-        assert len(response.json()) == constants.MAX_NUMBER_PER_PAGE
+        assert len(response.json()) == CONST.MAX_NUMBER_PER_PAGE
 
 
 @pytest.mark.parametrize('sign', ['', '+', '-'])
-@pytest.mark.parametrize('field', constants.FIELD_NAMES)
+@pytest.mark.parametrize('field', CONST.FIELD_NAMES)
 @pytest.mark.parametrize('endpoint', ['breweries?by_city=san_diego', ])
 def test_field_sorting(api_client, sign, field, endpoint):
     """check sorting"""
