@@ -283,10 +283,15 @@ class TestGetSingleBrewery:
         ('city', 'street', 'code', 'state', 'code', 'longitude', 'latitude',
          'phone', 'website'))
     def test_not_required_fields(self, expected, field_name):
-        """checking values of required fields with data from a database dump"""
+        """checking values of not required fields with data from a database dump"""
 
         key = getattr(CONST.EndpointTemplates, field_name).field_name
         # handling empty values
         expected_value = '' if expected[key] == 'Null' else expected[key]
         value = '' if self.data[key] is None else self.data[key]
         assert value == expected_value
+
+    @pytest.mark.skip(reason='this field is not in the database dump')
+    def test_updated_at_field(self, expected):
+        """checking values of updated_field with data from a database dump"""
+        assert True  # todo write a test condition
