@@ -5,6 +5,7 @@ from random import choices
 import pytest
 
 from openbrewerydb_api_tests import constants as CONST
+from openbrewerydb_api_tests import generators
 
 
 # =======================================================================================
@@ -245,7 +246,7 @@ class TestGetSingleBrewery:
     param = None
     data = None
 
-    @pytest.fixture(scope='class', params=choices(range(1, 4000), k=500))
+    @pytest.fixture(scope='class', params=choices(range(1, 4000), k=5))
     def response(self, api_client, request):
         """return response"""
 
@@ -308,6 +309,8 @@ class TestGetSingleBrewery:
 class TestRequestToApiWithErrors:
     @pytest.mark.parametrize('id', ('NotExistID', 10 ** 9, '_', -20))
     def test_get_single_brewery_not_exist_id(self, api_client, id):
+        """"""  # todo add docstring
+
         endpoint = CONST.EndpointTemplates.single_brewery.template.format(id)
         response = api_client.get(endpoint)
         assert response.status_code == 404
@@ -317,9 +320,10 @@ class TestRequestToApiWithErrors:
 class TestFilteredResponseByNotExistValue:
     @pytest.mark.parametrize(
         'value',
-        ('microb', 'micro_micro', 'micro%20micro', 'micr', '10',))
+        (generators.bad_values_generator(['micro', 'micro micro', 'micro bar'])))
     def test_filter_by_type_bad_value(self, api_client, value):
-        """"""
+        """"""  # todo add docstring
+
         endpoint = CONST.EndpointTemplates.type.template.format(value)
         response = api_client.get(endpoint)
         assert response.status_code == 200
@@ -327,9 +331,12 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        ('00000', '00000-0000', '44107%2040', '44107%20%2040', '44107__2040',))
+        (['00000', '00000-0000'] + generators.bad_values_generator(
+            ['44107', '45822 45822', '45215 4548'],
+            separators=['__', '%20', '.', '--', ''])))
     def test_filter_by_postal_code_bad_value(self, api_client, value):
-        """"""
+        """"""  # todo add docstring
+
         endpoint = CONST.EndpointTemplates.code.template.format(value)
         response = api_client.get(endpoint)
         assert response.status_code == 200
@@ -337,11 +344,33 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        ('new_mexic', 'new.mexico', 'newmexico', 'new%20mexic', 'ohi', 'new__mexico',
-         'new%20%20mexico'))
+        (generators.bad_values_generator(['Ohio', 'New Mexico', 'Ohio Ohio'])))
     def test_filter_state_code_bad_value(self, api_client, value):
-        """"""
+        """"""  # todo add docstring
+
         endpoint = CONST.EndpointTemplates.state.template.format(value)
+        response = api_client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        (generators.bad_values_generator(['Baltimore', 'San Diego', 'Ava Ava'])))
+    def test_filter_by_city_bad_value(self, api_client, value):
+        """"""  # todo add docstring
+
+        endpoint = CONST.EndpointTemplates.city.template.format(value)
+        response = api_client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        (generators.bad_values_generator(['Running Dogs Brewery', 'GBC', 'GBC GBC'])))
+    def test_filter_by_name_bad_value(self, api_client, value):
+        """"""  # todo add docstring
+
+        endpoint = CONST.EndpointTemplates.name.template.format(value)
         response = api_client.get(endpoint)
         assert response.status_code == 200
         assert response.json() == []
