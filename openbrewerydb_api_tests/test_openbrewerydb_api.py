@@ -5,7 +5,6 @@ from random import choices
 import pytest
 
 from openbrewerydb_api_tests import constants as CONST
-from openbrewerydb_api_tests import generators
 
 
 # =======================================================================================
@@ -304,73 +303,3 @@ class TestGetSingleBrewery:
         """checking values of tag_list with data from a database dump"""
 
         assert True  # todo write a test condition
-
-
-class TestRequestToApiWithErrors:
-    @pytest.mark.parametrize('id', ('NotExistID', 10 ** 9, '_', -20))
-    def test_get_single_brewery_not_exist_id(self, api_client, id):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.single_brewery.template.format(id)
-        response = api_client.get(endpoint)
-        assert response.status_code == 404
-        assert response.json() == {'message': f"Couldn't find Brewery with 'id'={id}"}
-
-
-class TestFilteredResponseByNotExistValue:
-    @pytest.mark.parametrize(
-        'value',
-        (generators.bad_values_generator(['micro', 'micro micro', 'micro bar'])))
-    def test_filter_by_type_bad_value(self, api_client, value):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.type.template.format(value)
-        response = api_client.get(endpoint)
-        assert response.status_code == 200
-        assert response.json() == []
-
-    @pytest.mark.parametrize(
-        'value',
-        (['00000', '00000-0000'] + generators.bad_values_generator(
-            ['44107', '45822 45822', '45215 4548'],
-            separators=['__', '%20', '.', '--', ''])))
-    def test_filter_by_postal_code_bad_value(self, api_client, value):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.code.template.format(value)
-        response = api_client.get(endpoint)
-        assert response.status_code == 200
-        assert response.json() == []
-
-    @pytest.mark.parametrize(
-        'value',
-        (generators.bad_values_generator(['Ohio', 'New Mexico', 'Ohio Ohio'])))
-    def test_filter_state_code_bad_value(self, api_client, value):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.state.template.format(value)
-        response = api_client.get(endpoint)
-        assert response.status_code == 200
-        assert response.json() == []
-
-    @pytest.mark.parametrize(
-        'value',
-        (generators.bad_values_generator(['Baltimore', 'San Diego', 'Ava Ava'])))
-    def test_filter_by_city_bad_value(self, api_client, value):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.city.template.format(value)
-        response = api_client.get(endpoint)
-        assert response.status_code == 200
-        assert response.json() == []
-
-    @pytest.mark.parametrize(
-        'value',
-        (generators.bad_values_generator(['Running Dogs Brewery', 'GBC', 'GBC GBC'])))
-    def test_filter_by_name_bad_value(self, api_client, value):
-        """"""  # todo add docstring
-
-        endpoint = CONST.EndpointTemplates.name.template.format(value)
-        response = api_client.get(endpoint)
-        assert response.status_code == 200
-        assert response.json() == []
