@@ -229,23 +229,11 @@ class TestNumberPerPage:
         assert len(response.json()) == CONST.MAX_NUMBER_PER_PAGE
 
 
-@pytest.mark.parametrize('sign', ['', '+', '-'])
-@pytest.mark.parametrize('field', CONST.FIELD_NAMES)
-@pytest.mark.parametrize('endpoint', ['breweries?by_city=san_diego', ])
-def test_field_sorting(api_client, sign, field, endpoint):
-    """check sorting"""
-
-    reverse = True if sign == '+' else False
-    response = api_client.get(f'{endpoint}&sort={sign}{field}')
-    fields = [item[field] for item in response.json() if item[field]]
-    assert fields == sorted(fields, reverse=reverse)
-
-
 class TestGetSingleBrewery:
     param = None
     data = None
 
-    @pytest.fixture(scope='class', params=choices(range(1, 4000), k=5))
+    @pytest.fixture(scope='class', params=choices(range(1, 4000), k=5))  # todo constants
     def response(self, api_client, request):
         """return response"""
 
