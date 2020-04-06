@@ -43,6 +43,13 @@ def field_validator():
 
 
 @pytest.fixture(scope='session')
+def autocomplete_validator():
+    """provides a autocomplete validator"""
+
+    return validator.AutocompleteSchema()
+
+
+@pytest.fixture(scope='session')
 def db():
     """provides an object for working with a database dump"""
 

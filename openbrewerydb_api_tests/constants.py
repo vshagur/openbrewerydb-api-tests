@@ -26,6 +26,7 @@ class EndpointTemplates:
     id = Templates('id', 'breweries/{}')
     per_page = Templates(None, 'breweries?per_page={}')
     single_brewery = Templates(None, 'breweries/{}')
+    autocomplete = Templates(None, 'breweries/autocomplete?query={}')
     # the following attributes do not have patterns, but may be added soon
     country = Templates('country', None)
     street = Templates('street', None)

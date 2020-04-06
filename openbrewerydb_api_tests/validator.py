@@ -87,3 +87,13 @@ class BrewerySchema(Schema):
         required=True,
         validate=validate.OneOf(choices=CONST.TAGS))
     )
+
+
+class AutocompleteSchema(Schema):
+    id = fields.Int(required=True)
+
+    name = fields.Str(
+        required=True,
+        validate=validate.Length(min=CONST.MIN_LENTH_NAME_FIELD,
+                                 max=CONST.MAX_LENTH_STRING_FIELD)
+    )
