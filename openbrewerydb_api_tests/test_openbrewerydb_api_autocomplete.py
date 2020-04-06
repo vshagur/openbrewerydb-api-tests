@@ -4,9 +4,12 @@ from openbrewerydb_api_tests import constants as CONST
 
 
 class TestAutocompleteResponse:
+    """"""
+
     word = None
 
-    @pytest.fixture(scope='class', params=['san', 'brewery', 'fox', 'wolf'])
+    @pytest.fixture(scope='class',
+                    params=['the_shop', 'san', 'brewery', 'fox', 'wolf', 'san%20brewery'])
     def response(self, request, api_client):
         """returns the result of the request to api"""
 
@@ -20,10 +23,10 @@ class TestAutocompleteResponse:
 
         assert response.status_code == 200
 
-    def test_response_autocomplete_count_fields(self, response):
+    def test_response_autocomplete_count_items(self, response):
         """the number of returned breweries does not exceed 15"""
 
-        assert 0 <= len(response.json()) <= 15
+        assert 0 < len(response.json()) <= 15
 
     def test_response_autocomplete_field_names(self, response, autocomplete_validator):
         """check format"""
@@ -42,6 +45,9 @@ class TestAutocompleteResponse:
 
             assert new_response.status_code == 200
 
+            assert new_response.json()
+
             data = new_response.json()
             values = [value for value in data.values() if isinstance(value, str)]
+
             assert filter(lambda x: self.word in x.lower(), values)
