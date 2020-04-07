@@ -18,7 +18,7 @@ class TestRequestToApiWithErrors:
 class TestFilteredResponseByNotExistValue:
     @pytest.mark.parametrize(
         'value',
-        (generators.bad_values_generator(['micro', 'micro micro', 'micro bar'])))
+        (generators.bad_endpoints_generator(['micro', 'micro micro', 'micro bar'])))
     def test_filter_by_type_bad_value(self, api_client, value):
         """api returns does not return data when an invalid request
         for the brewery_type field"""
@@ -30,7 +30,7 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        (['00000', '00000-0000'] + generators.bad_values_generator(
+        (['00000', '00000-0000'] + generators.bad_endpoints_generator(
             ['44107', '45822 45822', '45215 4548'],
             separators=['__', '%20', '.', '--', ''])))
     def test_filter_by_postal_code_bad_value(self, api_client, value):
@@ -44,7 +44,7 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        (generators.bad_values_generator(['Ohio', 'New Mexico', 'Ohio Ohio'])))
+        (generators.bad_endpoints_generator(['Ohio', 'New Mexico', 'Ohio Ohio'])))
     def test_filter_by_state_bad_value(self, api_client, value):
         """api returns does not return data when an invalid request for the state field"""
 
@@ -55,7 +55,7 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        (generators.bad_values_generator(['Baltimore', 'San Diego', 'Ava Ava'])))
+        (generators.bad_endpoints_generator(['Baltimore', 'San Diego', 'Ava Ava'])))
     def test_filter_by_city_bad_value(self, api_client, value):
         """api returns does not return data when an invalid request for the city field"""
 
@@ -66,7 +66,7 @@ class TestFilteredResponseByNotExistValue:
 
     @pytest.mark.parametrize(
         'value',
-        (generators.bad_values_generator(['Running Dogs Brewery', 'GBC', 'GBC GBC'])))
+        (generators.bad_endpoints_generator(['Running Dogs Brewery', 'GBC', 'GBC GBC'])))
     def test_filter_by_name_bad_value(self, api_client, value):
         """api returns does not return data when an invalid request for the name field"""
 

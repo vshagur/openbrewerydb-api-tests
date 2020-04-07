@@ -11,7 +11,6 @@ endpoints = [
     'breweries?by_name=company',
     'breweries?by_name=gordon_biersch',
     'breweries?by_name=granite%20city',
-
     # state endpoints
     'breweries?by_state=california',
     'breweries?by_state=new_york',
@@ -22,11 +21,11 @@ endpoints = [
     'breweries?by_postal=44107_4020',
     # type endpoints
     'breweries?by_type=planning',
-    # 'breweries?by_type=brewpub,micro', # todo это работает тоже
 ]
 
 
-@pytest.mark.parametrize('sign', ['', '-'])
+@pytest.mark.parametrize('sign', ['', '-']) # todo добавить "+",
+#  если он предусматривался требованиями к api
 @pytest.mark.parametrize('endpoint', endpoints)
 @pytest.mark.parametrize('field',
                          [field for field in CONST.FIELD_NAMES if field != 'tag_list'])

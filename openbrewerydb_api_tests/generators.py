@@ -4,8 +4,8 @@ from string import ascii_lowercase
 from uuid import uuid4
 
 
-def bad_values_generator(values_list, separators=None):
-    """"""  # todo add docstring
+def bad_endpoints_generator(values_list, separators=None):
+    """generates invalid values of endpoints"""
 
     if separators is None:
         separators = ['__', '%20%20', '.', '-', '']
@@ -20,7 +20,3 @@ def bad_values_generator(values_list, separators=None):
         new_values.append(value.lower() + ''.join(choices(ascii_lowercase, k=2)))
 
     return new_values
-
-
-# if __name__ == '__main__':
-#     print(bad_values_generator(['Bb', 'cc eee', 'aa', 'Ff Tttt']))
