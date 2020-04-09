@@ -32,6 +32,7 @@ endpoints = [
 def test_field_sorting(api_client, sign, field, endpoint):
     """check sorting"""
 
+
     reverse = True if sign == '-'  else False
     response = api_client.get(f'{endpoint}&sort={sign}{field}')
 
@@ -42,3 +43,6 @@ def test_field_sorting(api_client, sign, field, endpoint):
     assert 0 <= len(fields) <= 20
 
     assert fields == sorted(fields, reverse=reverse)
+
+#todo сделать тест на проверку идентичности возвращаемых данных при запросе без
+# использования сортировки и с использованием
