@@ -41,6 +41,14 @@ ENDPOINTS = {
         'breweries/autocomplete?query=company%20brewery',
         'breweries/autocomplete?query=company_brewery',
     ],
+    'TestRequestWithMessageErrors': [
+        'breweries/not_exist',
+        'breweries/9999999999',
+        'breweries/_',
+        'breweries/-20',
+        'breweries/0',
+        'breweries/%20'
+    ]
 }
 
 
@@ -174,3 +182,33 @@ class TestAutocompleteResponse:
         for brewery_data in response.json():
             errors = fields_short_validator.validate(brewery_data)
             assert not errors, f'Data format error: {errors}\nData: {brewery_data}\n'
+
+
+class TestRequestWithMessageErrors:
+    """"""  # todo
+
+    @pytest.fixture(scope='class', params=ENDPOINTS['TestRequestWithMessageErrors'])
+    def response(self, api_client, request):
+        """return response"""
+        return api_client.get(request.param)
+
+    def test_response_code(self, response):
+        """check response code"""
+
+        assert response.status_code == 404
+
+    def test_headers_content_type(self, response):
+        """check content_type"""
+
+        assert response.headers['Content-type'] == 'application/json; charset=utf-8'
+
+    def test_responses_data_not_empty(self, response):
+        """check responses is not empty"""
+
+        assert response.json()
+
+    def test_responses_format(self, response):
+        """check responses format"""
+
+        data = response.json()
+        assert 'message' in data.keys() and len(data.keys()) == 1
