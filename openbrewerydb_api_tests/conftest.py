@@ -1,11 +1,14 @@
 import pytest
 
-from openbrewerydb_api_tests import client
 from openbrewerydb_api_tests import constants as CONST
-from openbrewerydb_api_tests import dump_db
-from openbrewerydb_api_tests import validator
+from openbrewerydb_api_tests.tools import client
+from openbrewerydb_api_tests.tools import dump_db
+from openbrewerydb_api_tests.tools import validator
 
 
+# =======================================================================================
+# CLI options
+# =======================================================================================
 def pytest_addoption(parser):
     """adds command line options"""
 
@@ -25,6 +28,9 @@ def pytest_addoption(parser):
     )
 
 
+# =======================================================================================
+# Fixtures
+# =======================================================================================
 @pytest.fixture(scope="session")
 def api_client(request):
     """provides a client for working with api"""
@@ -36,23 +42,23 @@ def api_client(request):
 
 
 @pytest.fixture(scope='session')
-def field_validator():
+def fields_validator():
     """provides a field validator"""
 
     return validator.BrewerySchema()
 
 
 @pytest.fixture(scope='session')
-def autocomplete_validator():
-    """provides a autocomplete validator"""
+def fields_short_validator():
+    """provides a short fields validator"""
 
-    return validator.AutocompleteSchema()
+    return validator.ShortBrewerySchema()
 
 
-@pytest.fixture(scope='session')
-def db():
-    """provides an object for working with a database dump"""
-
-    db_obj = dump_db.DumpDB()
-    db_obj.load_from_csv(CONST.BACKUP_DB_PATH)
-    return db_obj
+# @pytest.fixture(scope='session')
+# def db():
+#     """provides an object for working with a database dump"""
+#
+#     db_obj = dump_db.DumpDB()
+#     db_obj.load_from_csv(CONST.BACKUP_DB_PATH)
+#     return db_obj

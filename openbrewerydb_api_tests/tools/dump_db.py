@@ -33,3 +33,11 @@ class DumpDB:
             filter = lambda x: True
 
         return [item for item in self.dump_db if filter(item[field_name])]
+
+# from collections import Counter
+# dump = DumpDB()
+# dump.load_from_csv('data/backup_db.csv')
+#
+# res = dump.select_fields('tag_list')
+# counter = Counter(res)
+# print(counter.most_common(10))

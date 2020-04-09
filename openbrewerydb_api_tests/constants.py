@@ -96,7 +96,7 @@ MIN_LATITUDE_VALUE = -90.0
 # =======================================================================================
 # db section
 # =======================================================================================
-BACKUP_DB_PATH = 'openbrewerydb_api_tests/backup_db.csv'
-
-with open(BACKUP_DB_PATH, 'r') as file:
-    NUMBER_DB_RECORDS = len(file.readlines()) - 1
+# BACKUP_DB_PATH = 'openbrewerydb_api_tests/backup_db.csv'
+#
+# with open(BACKUP_DB_PATH, 'r') as file:
+#     NUMBER_DB_RECORDS = len(file.readlines()) - 1

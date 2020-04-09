@@ -89,7 +89,7 @@ class BrewerySchema(Schema):
     )
 
 
-class AutocompleteSchema(Schema):
+class ShortBrewerySchema(Schema):
     id = fields.Int(required=True)
 
     name = fields.Str(
