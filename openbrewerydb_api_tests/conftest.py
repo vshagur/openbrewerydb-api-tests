@@ -2,7 +2,6 @@ import pytest
 
 from openbrewerydb_api_tests import constants as CONST
 from openbrewerydb_api_tests.tools import client
-from openbrewerydb_api_tests.tools import dump_db
 from openbrewerydb_api_tests.tools import validator
 
 
@@ -54,6 +53,12 @@ def fields_short_validator():
 
     return validator.ShortBrewerySchema()
 
+
+@pytest.fixture(scope='session')
+def message_error_validator():
+    """provides a message error validator"""
+
+    return validator.MessageErrorSchema()
 
 # @pytest.fixture(scope='session')
 # def db():

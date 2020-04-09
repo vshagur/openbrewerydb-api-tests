@@ -207,8 +207,9 @@ class TestRequestWithMessageErrors:
 
         assert response.json()
 
-    def test_responses_format(self, response):
+    def test_responses_format(self, response, message_error_validator):
         """check responses format"""
 
         data = response.json()
-        assert 'message' in data.keys() and len(data.keys()) == 1
+        errors = message_error_validator.validate(data)
+        assert not errors, f'Data format error: {errors}\nData: {data}\n'

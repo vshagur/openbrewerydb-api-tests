@@ -97,3 +97,11 @@ class ShortBrewerySchema(Schema):
         validate=validate.Length(min=CONST.MIN_LENTH_NAME_FIELD,
                                  max=CONST.MAX_LENTH_STRING_FIELD)
     )
+
+class MessageErrorSchema(Schema):
+
+    message = fields.Str(
+        required=True,
+        validate=validate.Regexp(CONST.MESSAGE_ERROR_REGEX)
+
+    )
