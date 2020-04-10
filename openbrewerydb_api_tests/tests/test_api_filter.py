@@ -261,10 +261,10 @@ class TestFilteredResponseBadValue:
         'value',
         ('53cf66ac', '{}', 'running__dogs__brewery', 'running%20%20dogs%20%20brewery',
          'running.dogs.brewery', 'running-dogs-brewery', 'runningdogsbrewery',
-         'gbc__gbc', 'gbc%20%20gbc', 'gbc.gbc', 'gbc-gbc', 'gbcgbc', 'rbgbc', 'gbcsw',
-         '%20brewery', '%20'))
+         '%20brewery', 'modern,times', '%20', '%20running%20dogs%20brewery'))
     def test_filter_by_name_bad_value(self, api_client, value):
-        """"""  # todo
+        """a request by the name field filter returns an empty list if a bad value
+        is passed"""
 
         response = api_client.get_filter_by('name', value)
         assert response.json() == []
@@ -273,9 +273,11 @@ class TestFilteredResponseBadValue:
         'value',
         ('4002f33a', '{}', 'san__diego', 'san%20%20diego', 'san.diego', 'san-diego',
          'sandiego', 'ava__ava', 'ava%20%20ava', 'ava.ava', 'ava-ava', 'avaava',
-         'febaltimore', 'baltimorewk', '123456789', '%20new%20york', 'ne_york', '%20'))
+         'febaltimore', 'baltimorewk', '123456789', '%20new%20york', 'ne_york',
+         'new,york', '%20'))
     def test_filter_by_city_bad_value(self, api_client, value):
-        """"""  # todo
+        """a request by the city field filter returns an empty list if a bad value
+        is passed"""
 
         response = api_client.get_filter_by('city', value)
         assert response.json() == []
@@ -285,9 +287,10 @@ class TestFilteredResponseBadValue:
         'value',
         ('80b5b388', '{}', 'new__mexico', 'new%20%20mexico', 'new.mexico', 'new-mexico',
          'newmexico', 'ohio__ohio', 'ohio%20%20ohio', 'ohio.ohio', 'ohio-ohio',
-         'ohioohio', 'knohio', 'ohiouf''%20texas', '%20'))
+         'ohioohio', 'knohio', 'ohiouf''%20texas', 'new,mexico', '%20'))
     def test_filter_by_state_bad_value(self, api_client, value):
-        """"""  # todo
+        """a request by the state field filter returns an empty list if a bad value
+        is passed"""
 
         response = api_client.get_filter_by('state', value)
         assert response.json() == []
@@ -297,21 +300,33 @@ class TestFilteredResponseBadValue:
         ('00000', '00000-0000', 'TBD', 'cea8d6ce', '{}', '45822__45822', '45822%2045822',
          '45822.45822', '45822--45822', '4582245822', '45215__4548', '45215%204548',
          '45215.4548', '45215--4548', '452154548', 'tn44107', '44107jv', '%2044107',
-         '%20'))
+         '45215,4548', '%20'))
     def test_filter_by_postal_code_bad_value(self, api_client, value):
-        """"""  # todo
+        """a request by the postal_code field filter returns an empty list if a bad value
+        is passed"""
 
         response = api_client.get_filter_by('postal_code', value)
         assert response.json() == []
 
     @pytest.mark.parametrize(
         'value',
-        ( '5962bbcb', '{}', 'micro__micro', 'micro%20%20micro', 'micro.micro',
-          'micro-micro', 'micromicro', 'micro__bar', 'micro%20%20bar', 'micro.bar',
-          'micro-bar', 'microbar', 'fumicro', 'microms','%20micro', '%20'))
-    def test_filter_by_type_value(self, api_client, value):
-        """"""  # todo
+        ('5962bbcb', '{}', 'micro__micro', 'micro%20%20micro', 'micro.micro',
+         'micro-micro', 'micromicro', 'micro__bar', 'micro%20%20bar', 'micro.bar',
+         'micro-bar', 'microbar', 'fumicro', 'microms', '%20micro', '%20', 'micro,bar'))
+    def test_filter_by_type_bad_value(self, api_client, value):
+        """a request by the brewery_type field filter returns an empty list if
+        a bad value is passed"""
 
-        response = api_client.get_filter_by('postal_code', value)
+        response = api_client.get_filter_by('brewery_type', value)
         assert response.json() == []
-# todo проверить разделитель запятая, на некоторых запроса может проходить
+        # todo проверить разделитель запятая, на некоторых запроса может проходить
+
+    @pytest.mark.skip(reason='little data, not implemented')
+    def test_filter_by_tag_value(self, api_client, value):
+        """"""  # todo
+        pass
+
+    @pytest.mark.skip(reason='little data, not implemented')
+    def test_filter_by_tags_value(self, api_client, value):
+        """"""  # todo
+        pass
