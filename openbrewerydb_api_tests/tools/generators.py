@@ -20,3 +20,6 @@ def bad_endpoints_generator(values_list, separators=None):
         new_values.append(value.lower() + ''.join(choices(ascii_lowercase, k=2)))
 
     return new_values
+
+# res = bad_endpoints_generator(['micro', 'micro micro', 'micro bar'])
+# print(res)

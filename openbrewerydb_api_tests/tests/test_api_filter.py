@@ -213,8 +213,16 @@ class TestNumberPerPage:
         response = api_client.get(endpoint)
         assert len(response.json()) == number
 
-    @pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1, 'one'))
+    @pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1))
     def test_number_elements_per_page_negative_value(self, api_client, number):
+        """checking the number of elements per page (negative values)"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == 0
+
+    @pytest.mark.parametrize('number', ('%20', 'one'))
+    def test_number_elements_per_page_not_valid_value(self, api_client, number):
         """checking the number of elements per page (negative values)"""
 
         endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
@@ -237,10 +245,73 @@ class TestNumberPerPage:
         response = api_client.get(endpoint)
         assert len(response.json()) == CONST.DEFAULT_NUMBER_PER_PAGE
 
-    @pytest.mark.parametrize('number', (0, -1, -2, 1000, 'one'))
+    @pytest.mark.parametrize('number', (0, -1, -2, 1000, 'one', '%20'))
     def test_number_elements_for_page_not_valid_value(self, api_client, number):
         """checking the number of elements per page (page request)"""
 
         endpoint = CONST.ENDPOINT_TEMPLATES['page'].format(number)
         response = api_client.get(endpoint)
         assert len(response.json()) == 0
+
+
+class TestFilteredResponseBadValue:
+    """"""
+
+    @pytest.mark.parametrize(
+        'value',
+        ('53cf66ac', '{}', 'running__dogs__brewery', 'running%20%20dogs%20%20brewery',
+         'running.dogs.brewery', 'running-dogs-brewery', 'runningdogsbrewery',
+         'gbc__gbc', 'gbc%20%20gbc', 'gbc.gbc', 'gbc-gbc', 'gbcgbc', 'rbgbc', 'gbcsw',
+         '%20brewery', '%20'))
+    def test_filter_by_name_bad_value(self, api_client, value):
+        """"""  # todo
+
+        response = api_client.get_filter_by('name', value)
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        ('4002f33a', '{}', 'san__diego', 'san%20%20diego', 'san.diego', 'san-diego',
+         'sandiego', 'ava__ava', 'ava%20%20ava', 'ava.ava', 'ava-ava', 'avaava',
+         'febaltimore', 'baltimorewk', '123456789', '%20new%20york', 'ne_york', '%20'))
+    def test_filter_by_city_bad_value(self, api_client, value):
+        """"""  # todo
+
+        response = api_client.get_filter_by('city', value)
+        assert response.json() == []
+
+    # todo узнать про поиск, так как "tex" вернет для texas
+    @pytest.mark.parametrize(
+        'value',
+        ('80b5b388', '{}', 'new__mexico', 'new%20%20mexico', 'new.mexico', 'new-mexico',
+         'newmexico', 'ohio__ohio', 'ohio%20%20ohio', 'ohio.ohio', 'ohio-ohio',
+         'ohioohio', 'knohio', 'ohiouf''%20texas', '%20'))
+    def test_filter_by_state_bad_value(self, api_client, value):
+        """"""  # todo
+
+        response = api_client.get_filter_by('state', value)
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        ('00000', '00000-0000', 'TBD', 'cea8d6ce', '{}', '45822__45822', '45822%2045822',
+         '45822.45822', '45822--45822', '4582245822', '45215__4548', '45215%204548',
+         '45215.4548', '45215--4548', '452154548', 'tn44107', '44107jv', '%2044107',
+         '%20'))
+    def test_filter_by_postal_code_bad_value(self, api_client, value):
+        """"""  # todo
+
+        response = api_client.get_filter_by('postal_code', value)
+        assert response.json() == []
+
+    @pytest.mark.parametrize(
+        'value',
+        ( '5962bbcb', '{}', 'micro__micro', 'micro%20%20micro', 'micro.micro',
+          'micro-micro', 'micromicro', 'micro__bar', 'micro%20%20bar', 'micro.bar',
+          'micro-bar', 'microbar', 'fumicro', 'microms','%20micro', '%20'))
+    def test_filter_by_type_value(self, api_client, value):
+        """"""  # todo
+
+        response = api_client.get_filter_by('postal_code', value)
+        assert response.json() == []
+# todo проверить разделитель запятая, на некоторых запроса может проходить
