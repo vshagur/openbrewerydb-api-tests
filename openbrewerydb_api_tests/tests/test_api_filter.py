@@ -213,7 +213,7 @@ class TestNumberPerPage:
         response = api_client.get(endpoint)
         assert len(response.json()) == number
 
-    @pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1))
+    @pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1, 'one'))
     def test_number_elements_per_page_negative_value(self, api_client, number):
         """checking the number of elements per page (negative values)"""
 
@@ -228,3 +228,19 @@ class TestNumberPerPage:
         endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
         response = api_client.get(endpoint)
         assert len(response.json()) == CONST.MAX_NUMBER_PER_PAGE
+
+    @pytest.mark.parametrize('number', (1, 2, 19, 20, 21, 49, 50, 51, 223))
+    def test_number_elements_for_page(self, api_client, number):
+        """checking the number of elements per page (page request)"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['page'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == CONST.DEFAULT_NUMBER_PER_PAGE
+
+    @pytest.mark.parametrize('number', (0, -1, -2, 1000, 'one'))
+    def test_number_elements_for_page_not_valid_value(self, api_client, number):
+        """checking the number of elements per page (page request)"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['page'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == 0

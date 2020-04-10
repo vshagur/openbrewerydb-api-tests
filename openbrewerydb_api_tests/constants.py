@@ -21,6 +21,7 @@ ENDPOINT_TEMPLATES = {
     'state': 'breweries?by_state={}',
     'postal_code': 'breweries?by_postal={}',
     'pages': 'breweries?per_page={}',
+    'page': 'breweries?page={}',
 }
 
 
