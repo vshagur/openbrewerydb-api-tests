@@ -57,7 +57,9 @@ ENDPOINTS = {
 # =======================================================================================
 
 class TestListResponse:
-    """"""  # todo
+    """the class provides a set of tests for answering requests with filtering by field,
+    the basic parameters are checked - the response code, headers, the presence of data
+    in the response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestListResponse'])
     def response(self, api_client, request):
@@ -89,7 +91,9 @@ class TestListResponse:
 
 
 class TestGetResponse:
-    """"""  # todo
+    """the class provides a set of tests for answering requests with filtering by ID,
+    the basic parameters are checked - the response code, headers, the presence of data
+    in the response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestGetResponse'])
     def response(self, api_client, request):
@@ -121,7 +125,9 @@ class TestGetResponse:
 
 
 class TestSearchResponse:
-    """"""  # todo
+    """the class provides a set of tests for answering search queries, the basic
+    parameters are checked - the response code, headers, the presence of data in the
+    response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestSearchResponse'])
     def response(self, api_client, request):
@@ -153,7 +159,9 @@ class TestSearchResponse:
 
 
 class TestAutocompleteResponse:
-    """"""  # todo
+    """the class provides a set of tests for answering autocomplete requests, the basic
+    parameters are checked - the response code, headers, the presence of data in the
+    response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestAutocompleteResponse'])
     def response(self, api_client, request):
@@ -185,7 +193,9 @@ class TestAutocompleteResponse:
 
 
 class TestRequestWithMessageErrors:
-    """"""  # todo
+    """the class provides a set of tests for responding to requests that receive an
+    error message, the basic parameters are checked - the response code, headers,
+    the presence of data in the response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestRequestWithMessageErrors'])
     def response(self, api_client, request):

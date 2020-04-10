@@ -282,7 +282,6 @@ class TestFilteredResponseBadValue:
         response = api_client.get_filter_by('city', value)
         assert response.json() == []
 
-    # todo узнать про поиск, так как "tex" вернет для texas
     @pytest.mark.parametrize(
         'value',
         ('80b5b388', '{}', 'new__mexico', 'new%20%20mexico', 'new.mexico', 'new-mexico',
@@ -319,14 +318,17 @@ class TestFilteredResponseBadValue:
 
         response = api_client.get_filter_by('brewery_type', value)
         assert response.json() == []
-        # todo проверить разделитель запятая, на некоторых запроса может проходить
 
     @pytest.mark.skip(reason='little data, not implemented')
     def test_filter_by_tag_value(self, api_client, value):
-        """"""  # todo
+        """a request by the tag filter returns an empty list if a bad value is passed"""
+
+        # todo add implementation when there will be a lot of data
         pass
 
     @pytest.mark.skip(reason='little data, not implemented')
     def test_filter_by_tags_value(self, api_client, value):
-        """"""  # todo
+        """a request by the tags filter returns an empty list if a bad value is passed"""
+
+        # todo add implementation when there will be a lot of data
         pass
