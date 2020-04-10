@@ -18,6 +18,5 @@ class APIClient:
         return requests.get(url)
 
     def get_filter_by(self, field_name, value):
-        field = getattr(self.templates, field_name)
-        endpoint = field.template.format(value)
+        endpoint = self.templates[field_name].format(value)
         return self.get(endpoint)

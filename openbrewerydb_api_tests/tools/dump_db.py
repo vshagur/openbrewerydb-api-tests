@@ -38,6 +38,8 @@ class DumpDB:
 # dump = DumpDB()
 # dump.load_from_csv('data/backup_db.csv')
 #
-# res = dump.select_fields('tag_list')
-# counter = Counter(res)
-# print(counter.most_common(10))
+# res = dump.select_fields('postal_code')
+# res = [i for i in res if len(i)==6]
+# # counter = Counter(res)
+# # print(counter.most_common(10))
+# print(res)

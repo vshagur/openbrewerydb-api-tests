@@ -36,7 +36,7 @@ def api_client(request):
 
     base_url = request.config.getoption("--url")
     delay = request.config.getoption("--delay")
-    templates = CONST.EndpointTemplates
+    templates = CONST.ENDPOINT_TEMPLATES
     return client.APIClient(base_url=base_url, delay=delay, templates=templates)
 
 

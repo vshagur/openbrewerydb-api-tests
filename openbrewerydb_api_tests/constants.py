@@ -12,6 +12,16 @@ DEFAULT_NUMBER_PER_PAGE = 20
 
 MAX_NUMBER_PER_PAGE = 50
 
+ENDPOINT_TEMPLATES = {
+    'brewery_type': 'breweries?by_type={}',
+    'city': 'breweries?by_city={}',
+    'name': 'breweries?by_name={}',
+    'tag': 'breweries?by_tag={}',
+    'tags': 'breweries?by_tags={}',
+    'state': 'breweries?by_state={}',
+    'postal_code': 'breweries?by_postal={}',
+}
+
 
 class EndpointTemplates:
     Templates = namedtuple('Templates', ('field_name, template'))
