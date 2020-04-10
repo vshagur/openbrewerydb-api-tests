@@ -202,3 +202,29 @@ class TestFilteredResponse:
         new_value = value.replace('-', '_')
         response = api_client.get_filter_by('postal_code', value)
         assert self.is_all_fields_valid('postal_code', response, lambda x: x == value)
+
+
+class TestNumberPerPage:
+    @pytest.mark.parametrize('number', (0, 1, 2, 19, 20, 21, 49, 50))
+    def test_number_elements_per_page(self, api_client, number):
+        """checking the number of elements per page"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == number
+
+    @pytest.mark.parametrize('number', (-51, -50, -49, -21, -20, -19, -1))
+    def test_number_elements_per_page_negative_value(self, api_client, number):
+        """checking the number of elements per page (negative values)"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == 0
+
+    @pytest.mark.parametrize('number', (51, 100, 500, 1000))
+    def test_number_elements_per_page_more_than_maximum(self, api_client, number):
+        """checking the number of elements per page (value > 50)"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['pages'].format(number)
+        response = api_client.get(endpoint)
+        assert len(response.json()) == CONST.MAX_NUMBER_PER_PAGE
