@@ -82,6 +82,11 @@ class TestListResponse:
 
         assert response.json()
 
+    def test_response_autocomplete_count_items(self, response):
+        """the number of returned items does not exceed 15"""
+
+        assert 0 < len(response.json()) <= 20
+
     def test_responses_format(self, response, fields_validator):
         """check responses format"""
 
@@ -160,8 +165,8 @@ class TestSearchResponse:
 
 class TestAutocompleteResponse:
     """the class provides a set of tests for answering autocomplete requests, the basic
-    parameters are checked - the response code, headers, the presence of data in the
-    response and the compliance of the data with the format"""
+    parameters are checked - the response code, headers, number of items returned,
+    the presence of data in the response and the compliance of the data with the format"""
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestAutocompleteResponse'])
     def response(self, api_client, request):
@@ -183,6 +188,11 @@ class TestAutocompleteResponse:
         """check that the content of the response is not empty"""
 
         assert response.json()
+
+    def test_response_autocomplete_count_items(self, response):
+        """the number of returned items does not exceed 15"""
+
+        assert 0 < len(response.json()) <= 15
 
     def test_responses_format(self, response, fields_short_validator):
         """checking the format of the content of the response"""

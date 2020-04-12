@@ -8,8 +8,9 @@ class TestAutocompleteResponse:
 
     word = None
 
-    @pytest.fixture(scope='class',
-                    params=['the_shop', 'san', 'brewery', 'fox', 'wolf', 'san%20brewery'])
+    @pytest.fixture(
+        scope='class',
+        params=['the_shop', 'san', 'brewery', 'fox', 'wolf', 'san%20brewery'])
     def response(self, request, api_client):
         """returns the result of the request to api"""
 
