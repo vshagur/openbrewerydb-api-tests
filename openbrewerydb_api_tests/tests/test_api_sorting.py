@@ -24,7 +24,15 @@ TEST_DATA = {
         'breweries?by_postal=44107_4020',
         # type endpoints
         'breweries?by_type=planning',
-        # todo add data
+        'breweries?by_type=micro',
+        # tag
+        'breweries?by_tag=patio',
+        # todo uncomment when data appears in the database
+        # tags
+        # 'breweries?by_tags=patio,dog-friendly',
+        # page
+        'breweries?page=15',
+        'breweries?page=42',
     ],
     'fields': [field for field in CONST.FIELD_NAMES if field != 'tag_list'],
     'signs': ['', '-', '+'],
