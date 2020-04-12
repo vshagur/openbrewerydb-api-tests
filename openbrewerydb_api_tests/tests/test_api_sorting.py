@@ -2,6 +2,8 @@ from itertools import product
 
 import pytest
 
+from openbrewerydb_api_tests import constants as CONST
+
 TEST_DATA = {
     'endpoints': [
         # city endpoints
@@ -22,14 +24,17 @@ TEST_DATA = {
         'breweries?by_postal=44107_4020',
         # type endpoints
         'breweries?by_type=planning',
+        # todo add data
     ],
+    'fields': [field for field in CONST.FIELD_NAMES if field != 'tag_list'],
     'signs': ['', '-', '+'],
-    # 'fields': [field for field in CONST.FIELD_NAMES if field != 'tag_list'],
-    'fields': ['city'],
 }
 
 
 class TestSortingResponse:
+    """the class provides a set of tests for checking the correctness of sorting
+    in api responses and invariance of returned data"""
+
     @pytest.fixture(
         scope='class',
         params=product(TEST_DATA['endpoints'], TEST_DATA['signs'], TEST_DATA['fields'], ))
@@ -43,7 +48,9 @@ class TestSortingResponse:
 
     def test_field_sorting(self, dataset):
         """check sorting"""
+
         reverse, field, _, response_sort, endpoint = dataset
+        # Note - ignore empty lines and None
         fields = [item[field] for item in response_sort if item[field]]
 
         if field == 'id':
