@@ -1,48 +1,70 @@
+from itertools import product
+
 import pytest
 
-from openbrewerydb_api_tests import constants as CONST
-
-endpoints = [
-    # city endpoints
-    'breweries?by_city=portland',
-    'breweries?by_city=san%20diego',
-    'breweries?by_city=san_diego',
-    # name endpoints
-    'breweries?by_name=company',
-    'breweries?by_name=gordon_biersch',
-    'breweries?by_name=granite%20city',
-    # state endpoints
-    'breweries?by_state=california',
-    'breweries?by_state=new_york',
-    'breweries?by_state=north%20carolina',
-    # postal code endpoints
-    'breweries?by_postal=44107',
-    'breweries?by_postal=44107-4020',
-    'breweries?by_postal=44107_4020',
-    # type endpoints
-    'breweries?by_type=planning',
-]
-
-
-@pytest.mark.parametrize('sign', ['', '-']) # todo добавить "+",
-#  если он предусматривался требованиями к api
-@pytest.mark.parametrize('endpoint', endpoints)
-@pytest.mark.parametrize('field',
-                         [field for field in CONST.FIELD_NAMES if field != 'tag_list'])
-def test_field_sorting(api_client, sign, field, endpoint):
-    """check sorting"""
+TEST_DATA = {
+    'endpoints': [
+        # city endpoints
+        'breweries?by_city=portland',
+        'breweries?by_city=san%20diego',
+        'breweries?by_city=san_diego',
+        # name endpoints
+        'breweries?by_name=company',
+        'breweries?by_name=gordon_biersch',
+        'breweries?by_name=granite%20city',
+        # state endpoints
+        'breweries?by_state=california',
+        'breweries?by_state=new_york',
+        'breweries?by_state=north%20carolina',
+        # postal code endpoints
+        'breweries?by_postal=44107',
+        'breweries?by_postal=44107-4020',
+        'breweries?by_postal=44107_4020',
+        # type endpoints
+        'breweries?by_type=planning',
+    ],
+    'signs': ['', '-', '+'],
+    # 'fields': [field for field in CONST.FIELD_NAMES if field != 'tag_list'],
+    'fields': ['city'],
+}
 
 
-    reverse = True if sign == '-'  else False
-    response = api_client.get(f'{endpoint}&sort={sign}{field}')
+class TestSortingResponse:
+    @pytest.fixture(
+        scope='class',
+        params=product(TEST_DATA['endpoints'], TEST_DATA['signs'], TEST_DATA['fields'], ))
+    def dataset(self, api_client, request):
+        endpoint, sign, field = request.param
+        reverse = True if sign == '-' else False
+        response = api_client.get(endpoint).json()
+        new_endpoint = f'{endpoint}&sort={sign}{field}'
+        response_sort = api_client.get(new_endpoint).json()
+        return reverse, field, response, response_sort, new_endpoint
 
-    assert response.status_code == 200
+    def test_field_sorting(self, dataset):
+        """check sorting"""
+        reverse, field, _, response_sort, endpoint = dataset
+        fields = [item[field] for item in response_sort if item[field]]
 
-    fields = [item[field] for item in response.json() if item[field]]
+        if field == 'id':
+            expected = sorted(fields, reverse=reverse, key=lambda x: int(x))
+        if field in ('longitude', 'latitude'):
+            expected = sorted(fields, reverse=reverse, key=lambda x: float(x))
+        else:
+            expected = sorted(fields, reverse=reverse)
 
-    assert 0 <= len(fields) <= 20
+        assert fields == expected, f'endpoint: {endpoint}\nfields: {fields}\n'
 
-    assert fields == sorted(fields, reverse=reverse)
+    def test_data_persistence(self, dataset):
+        """check data persistence"""
 
-#todo сделать тест на проверку идентичности возвращаемых данных при запросе без
-# использования сортировки и с использованием
+        reverse, field, response, response_sort, endpoint = dataset
+        fields = [item['id'] for item in response]
+        fields_sort = [item['id'] for item in response_sort]
+
+        assert set(fields) == set(fields_sort), \
+            f'endpoint: {endpoint}\nfields: {fields}\n'
+
+
+
+        # todo сортировка по не существующему полю, как должно отвечать api?

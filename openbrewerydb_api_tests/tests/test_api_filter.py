@@ -64,7 +64,8 @@ VALUES = {
 
 
 class TestFilteredResponse:
-    """"""
+    """the class provides a set of tests for checking responses to requests with
+    filtering by field, a check of filtering accuracy"""
 
     def is_all_fields_valid(self, field_name, response, func):
         """Returns True if the list of fields is not empty and a call to funс for all
@@ -205,6 +206,8 @@ class TestFilteredResponse:
 
 
 class TestNumberPerPage:
+    """the class provides a set of tests to check the number of returned items"""
+
     @pytest.mark.parametrize('number', (0, 1, 2, 19, 20, 21, 49, 50))
     def test_number_elements_per_page(self, api_client, number):
         """checking the number of elements per page"""
@@ -255,7 +258,9 @@ class TestNumberPerPage:
 
 
 class TestFilteredResponseBadValue:
-    """"""
+    """the class provides a set of tests for checking responses to requests with
+    the transfer of missing or invalid data in the database, checking for lack of
+    data in the response"""
 
     @pytest.mark.parametrize(
         'value',

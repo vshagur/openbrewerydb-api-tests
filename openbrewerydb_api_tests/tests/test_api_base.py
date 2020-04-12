@@ -63,12 +63,12 @@ class TestListResponse:
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestListResponse'])
     def response(self, api_client, request):
-        """return response"""
+        """fixture sends a request to api, returns a response object"""
 
         return api_client.get(request.param)
 
     def test_response_code(self, response):
-        """check response code"""
+        """check status response code"""
 
         assert response.status_code == 200
 
@@ -97,12 +97,12 @@ class TestGetResponse:
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestGetResponse'])
     def response(self, api_client, request):
-        """return response"""
+        """fixture sends a request to api, returns a response object"""
 
         return api_client.get(request.param)
 
     def test_response_code(self, response):
-        """check response code"""
+        """check status response code"""
 
         assert response.status_code == 200
 
@@ -136,7 +136,7 @@ class TestSearchResponse:
         return api_client.get(request.param)
 
     def test_response_code(self, response):
-        """check response code"""
+        """check status response code"""
 
         assert response.status_code == 200
 
@@ -165,27 +165,27 @@ class TestAutocompleteResponse:
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestAutocompleteResponse'])
     def response(self, api_client, request):
-        """return response"""
+        """fixture sends a request to api, returns a response object"""
 
         return api_client.get(request.param)
 
     def test_response_code(self, response):
-        """check response code"""
+        """check status response code"""
 
         assert response.status_code == 200
 
     def test_headers_content_type(self, response):
-        """check content_type"""
+        """checking response headers"""
 
         assert response.headers['Content-type'] == 'application/json; charset=utf-8'
 
     def test_responses_data_not_empty(self, response):
-        """check responses is not empty"""
+        """check that the content of the response is not empty"""
 
         assert response.json()
 
     def test_responses_format(self, response, fields_short_validator):
-        """check responses format"""
+        """checking the format of the content of the response"""
 
         for brewery_data in response.json():
             errors = fields_short_validator.validate(brewery_data)
@@ -199,11 +199,11 @@ class TestRequestWithMessageErrors:
 
     @pytest.fixture(scope='class', params=ENDPOINTS['TestRequestWithMessageErrors'])
     def response(self, api_client, request):
-        """return response"""
+        """fixture sends a request to api, returns a response object"""
         return api_client.get(request.param)
 
     def test_response_code(self, response):
-        """check response code"""
+        """check status response code"""
 
         assert response.status_code == 404
 
