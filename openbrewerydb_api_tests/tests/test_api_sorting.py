@@ -66,11 +66,10 @@ class TestSortingResponse:
         """check data persistence"""
 
         reverse, field, response, response_sort, endpoint = dataset
-        fields = [item['id'] for item in response]
-        fields_sort = [item['id'] for item in response_sort]
+        fields = {item['id'] for item in response}
+        fields_sort = {item['id'] for item in response_sort}
 
-        assert set(fields) == set(fields_sort), \
-            f'endpoint: {endpoint}\nfields: {fields}\n'
+        assert fields == fields_sort, f'endpoint: {endpoint}\nfields: {fields}\n'
 
 
 
