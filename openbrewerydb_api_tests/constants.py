@@ -22,6 +22,8 @@ ENDPOINT_TEMPLATES = {
     'postal_code': 'breweries?by_postal={}',
     'pages': 'breweries?per_page={}',
     'page': 'breweries?page={}',
+    'autocomplete' : 'breweries/autocomplete?query={}',
+    'id': 'breweries/{}',
 }
 
 
