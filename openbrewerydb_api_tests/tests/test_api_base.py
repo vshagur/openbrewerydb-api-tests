@@ -9,7 +9,7 @@ ENDPOINTS = {
         'breweries?by_city=san_diego',
         'breweries?by_city=new%20york',
         'breweries?by_name=cooper',
-        'breweries?by_name=craft_brewery'
+        'breweries?by_name=craft_brewery',
         'breweries?by_name=modern%20times',
         'breweries?by_state=ohio',
         'breweries?by_name=new_york',
@@ -24,7 +24,7 @@ ENDPOINTS = {
         'breweries?per_page=25',
         'breweries?by_state=ohio&sort=type',
         'breweries?by_state=ohio&sort=-name',
-        'breweries?by_state=new%20york&sort=+id'
+        'breweries?by_state=new%20york&sort=+id',
     ],
     'TestGetResponse': [
         'breweries/1',
