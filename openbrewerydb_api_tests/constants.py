@@ -1,5 +1,4 @@
 import re
-from collections import namedtuple
 
 # =======================================================================================
 # api section
@@ -13,42 +12,19 @@ DEFAULT_NUMBER_PER_PAGE = 20
 MAX_NUMBER_PER_PAGE = 50
 
 ENDPOINT_TEMPLATES = {
+    'autocomplete': 'breweries/autocomplete?query={}',
     'brewery_type': 'breweries?by_type={}',
     'city': 'breweries?by_city={}',
+    'id': 'breweries/{}',
     'name': 'breweries?by_name={}',
+    'page': 'breweries?page={}',
+    'pages': 'breweries?per_page={}',
+    'postal_code': 'breweries?by_postal={}',
+    'search': 'breweries/search?query={}',
+    'state': 'breweries?by_state={}',
     'tag': 'breweries?by_tag={}',
     'tags': 'breweries?by_tags={}',
-    'state': 'breweries?by_state={}',
-    'postal_code': 'breweries?by_postal={}',
-    'pages': 'breweries?per_page={}',
-    'page': 'breweries?page={}',
-    'autocomplete' : 'breweries/autocomplete?query={}',
-    'id': 'breweries/{}',
 }
-
-
-class EndpointTemplates:
-    Templates = namedtuple('Templates', ('field_name, template'))
-
-    type = Templates('brewery_type', 'breweries?by_type={}')
-    city = Templates('city', 'breweries?by_city={}')
-    name = Templates('name', 'breweries?by_name={}')
-    tag = Templates('tag_list', 'breweries?by_tag={}')
-    tags = Templates('tag_list', 'breweries?by_tags={}')
-    state = Templates('state', 'breweries?by_state={}')
-    code = Templates('postal_code', 'breweries?by_postal={}')
-    id = Templates('id', 'breweries/{}')
-    per_page = Templates(None, 'breweries?per_page={}')
-    single_brewery = Templates(None, 'breweries/{}')
-    autocomplete = Templates(None, 'breweries/autocomplete?query={}')
-    # the following attributes do not have patterns, but may be added soon
-    country = Templates('country', None)
-    street = Templates('street', None)
-    longitude = Templates('longitude', None)
-    latitude = Templates('latitude', None)
-    website = Templates('website_url', None)
-    phone = Templates('phone', None)
-
 
 # =======================================================================================
 #  validators section
@@ -108,11 +84,3 @@ MAX_LATITUDE_VALUE = 90.0
 MIN_LATITUDE_VALUE = -90.0
 
 MESSAGE_ERROR_REGEX = re.compile(r"^Couldn't find Brewery with 'id'=.+$")
-
-# =======================================================================================
-# db section
-# =======================================================================================
-# BACKUP_DB_PATH = 'openbrewerydb_api_tests/backup_db.csv'
-#
-# with open(BACKUP_DB_PATH, 'r') as file:
-#     NUMBER_DB_RECORDS = len(file.readlines()) - 1
