@@ -72,4 +72,10 @@ Check API completion capabilities.
 
     $ python -m pytest --html=report.html  --url="https://api.openbrewerydb.org/" --delay=0.1 openbrewerydb_api_tests/tests/test_api_autocomplete.py
     
-    
+## Authors
+
+* **Valeriy Shagur**  - [vshagur](https://github.com/vshagur), email: vshagur@gmail.com
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/vshagur/exgrex/blob/master/LICENSE) file for details    
