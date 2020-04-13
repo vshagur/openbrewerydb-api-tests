@@ -2,7 +2,7 @@ import re
 
 from marshmallow import Schema, fields, validate, ValidationError
 
-from openbrewerydb_api_tests import constants as CONST
+from openbrewerydb_api_tests import configuration as CONST
 
 
 def web_site_validator(data):
@@ -59,8 +59,8 @@ class BrewerySchema(Schema):
         required=True,
         allow_none=True,
         validate=validate.Range(min=-180, max=180)
-        # why does trying to specify values with variables (CONST.MIN_LONGITUDE_VALUE,
-        # CONST.MAX_LATITUDE_VALUE) drop tests?
+        # why does trying to specify values with variables (CONF.MIN_LONGITUDE_VALUE,
+        # CONF.MAX_LATITUDE_VALUE) drop tests?
     )
 
     latitude = fields.Float(

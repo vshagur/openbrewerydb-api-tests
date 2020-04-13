@@ -1,6 +1,6 @@
 import pytest
 
-from openbrewerydb_api_tests import constants as CONST
+from openbrewerydb_api_tests import configuration as CONF
 
 WORDS = [
     'brewery',
@@ -20,7 +20,7 @@ class TestAutocompleteResponse:
     def dataset(self, request, api_client):
         """returns the result of the request to api"""
 
-        endpoint = CONST.ENDPOINT_TEMPLATES['autocomplete'].format(request.param)
+        endpoint = CONF.ENDPOINT_TEMPLATES['autocomplete'].format(request.param)
         response = api_client.get(endpoint).json()
         return request.param, response
 
@@ -37,7 +37,7 @@ class TestAutocompleteResponse:
         ids = [item['id'] for item in response]
 
         for id in ids:
-            endpoint = CONST.ENDPOINT_TEMPLATES['id'].format(id)
+            endpoint = CONF.ENDPOINT_TEMPLATES['id'].format(id)
             data = api_client.get(endpoint).json()
             # ignore fields with id
             values = [value for value in data.values() if isinstance(value, str)]
@@ -54,6 +54,6 @@ class TestAutocompleteResponseBadValue:
     def test_autocomplete_response_bad_value(self, api_client, value):
         """a autocomplete request returns an empty list if a bad value is passed"""
 
-        endpoint = CONST.ENDPOINT_TEMPLATES['autocomplete'].format(value)
+        endpoint = CONF.ENDPOINT_TEMPLATES['autocomplete'].format(value)
         response = api_client.get(endpoint)
         assert response.json() == []

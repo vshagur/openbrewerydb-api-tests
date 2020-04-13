@@ -84,3 +84,11 @@ MAX_LATITUDE_VALUE = 90.0
 MIN_LATITUDE_VALUE = -90.0
 
 MESSAGE_ERROR_REGEX = re.compile(r"^Couldn't find Brewery with 'id'=.+$")
+
+# =======================================================================================
+# db section
+# =======================================================================================
+BACKUP_DB_PATH = 'openbrewerydb_api_tests/data/backup_db.csv'
+
+with open(BACKUP_DB_PATH, 'r') as file:
+    NUMBER_DB_RECORDS = len(file.readlines()) - 1

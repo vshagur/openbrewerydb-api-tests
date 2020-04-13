@@ -2,7 +2,7 @@ from itertools import product
 
 import pytest
 
-from openbrewerydb_api_tests import constants as CONST
+from openbrewerydb_api_tests import configuration as CONF
 
 TEST_DATA = {
     'endpoints': [
@@ -34,7 +34,7 @@ TEST_DATA = {
         'breweries?page=15',
         'breweries?page=42',
     ],
-    'fields': [field for field in CONST.FIELD_NAMES if field != 'tag_list'],
+    'fields': [field for field in CONF.FIELD_NAMES if field != 'tag_list'],
     'signs': ['', '-', '+'],
 }
 

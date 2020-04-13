@@ -1,6 +1,6 @@
 import pytest
 
-import openbrewerydb_api_tests.constants as CONST
+import openbrewerydb_api_tests.configuration as CONF
 
 WORDS = [
     'diving',
@@ -12,7 +12,7 @@ class TestSearchResponse:
     def dataset(self, request, api_client):
         """returns the result of the request to api"""
 
-        endpoint = CONST.ENDPOINT_TEMPLATES['search'].format(request.param)
+        endpoint = CONF.ENDPOINT_TEMPLATES['search'].format(request.param)
         response = api_client.get(endpoint).json()
         return request.param, response
 
@@ -35,6 +35,6 @@ class TestSearchResponseBadValue:
     def test_search_response_bad_value(self, api_client, value):
         """a search request returns an empty list if a bad value is passed"""
 
-        endpoint = CONST.ENDPOINT_TEMPLATES['search'].format(value)
+        endpoint = CONF.ENDPOINT_TEMPLATES['search'].format(value)
         response = api_client.get(endpoint)
         assert response.json() == []

@@ -1,7 +1,8 @@
 import pytest
 
-from openbrewerydb_api_tests import constants as CONST
+from openbrewerydb_api_tests import configuration as CONF
 from openbrewerydb_api_tests.tools import client
+from openbrewerydb_api_tests.tools import dump_db
 from openbrewerydb_api_tests.tools import validator
 
 
@@ -14,16 +15,16 @@ def pytest_addoption(parser):
     parser.addoption(
         '--url',
         action='store',
-        default=CONST.DEFAULT_URL,
-        help=f'Base URL for API, by default - {CONST.DEFAULT_URL}.'
+        default=CONF.DEFAULT_URL,
+        help=f'Base URL for API, by default - {CONF.DEFAULT_URL}.'
     )
 
     parser.addoption(
         '--delay',
         action='store',
         type=int,
-        default=CONST.DEFAULT_REQUEST_DELAY,
-        help=f'Delay between API requests, by default - {CONST.DEFAULT_REQUEST_DELAY}.'
+        default=CONF.DEFAULT_REQUEST_DELAY,
+        help=f'Delay between API requests, by default - {CONF.DEFAULT_REQUEST_DELAY}.'
     )
 
 
@@ -36,7 +37,7 @@ def api_client(request):
 
     base_url = request.config.getoption("--url")
     delay = request.config.getoption("--delay")
-    templates = CONST.ENDPOINT_TEMPLATES
+    templates = CONF.ENDPOINT_TEMPLATES
     return client.APIClient(base_url=base_url, delay=delay, templates=templates)
 
 
@@ -60,10 +61,11 @@ def message_error_validator():
 
     return validator.MessageErrorSchema()
 
-# @pytest.fixture(scope='session')
-# def db():
-#     """provides an object for working with a database dump"""
-#
-#     db_obj = dump_db.DumpDB()
-#     db_obj.load_from_csv(CONST.BACKUP_DB_PATH)
-#     return db_obj
+
+@pytest.fixture(scope='session')
+def db():
+    """provides an object for working with a database dump"""
+
+    db_obj = dump_db.DumpDB()
+    db_obj.load_from_csv(CONF.BACKUP_DB_PATH)
+    return db_obj
