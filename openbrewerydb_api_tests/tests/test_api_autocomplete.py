@@ -43,3 +43,17 @@ class TestAutocompleteResponse:
             values = [value for value in data.values() if isinstance(value, str)]
 
             assert data and filter(lambda x: word in x.lower(), values)
+
+
+class TestAutocompleteResponseBadValue:
+    @pytest.mark.parametrize(
+        'value',
+        ('53cf66ac', '{}', 'running__dogs__brewery', 'running%20%20dogs%20%20brewery',
+         'running.dogs.brewery', 'running-dogs-brewery', 'runningdogsbrewery',
+         '%20brewery', 'modern,times', '%20', '%20running%20dogs%20brewery', ''))
+    def test_autocomplete_response_bad_value(self, api_client, value):
+        """a autocomplete request returns an empty list if a bad value is passed"""
+
+        endpoint = CONST.ENDPOINT_TEMPLATES['autocomplete'].format(value)
+        response = api_client.get(endpoint)
+        assert response.json() == []
