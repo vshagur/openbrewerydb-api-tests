@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>2020-04-13_api_base_report.html</h1>
+    <p>Report generated on 13-Apr-2020 at 09:17:52 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>JAVA_HOME</td>
+        <td>/usr/lib/jvm/java-8-oracle</td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.8.1", "pytest": "5.4.1"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Linux-4.9.0-8-amd64-x86_64-with-debian-9.11</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "2.1.1", "metadata": "1.8.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.6</td></tr></table>
+    <h2>Summary</h2>
+    <p>158 tests ran in 34.89 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">148 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">10 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_city=new%20york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f62829320&gt;, response = &lt;Response [200]&gt;<br/>fields_validator = &lt;BrewerySchema(many=False)&gt;<br/><br/>    def test_responses_format(self, response, fields_validator):<br/>        &quot;&quot;&quot;check responses format&quot;&quot;&quot;<br/>    <br/>        for brewery_data in response.json():<br/>            errors = fields_validator.validate(brewery_data)<br/>&gt;           assert not errors, f&#x27;Data format error: {errors}\nData: {brewery_data}\n&#x27;<br/><span class="error">E           AssertionError: Data format error: {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><span class="error">E             Data: {&#x27;id&#x27;: 4631, &#x27;name&#x27;: &#x27;Brewery in Planning - New York&#x27;, &#x27;brewery_type&#x27;: &#x27;planning&#x27;, &#x27;street&#x27;: &#x27;&#x27;, &#x27;city&#x27;: &#x27;New York&#x27;, &#x27;state&#x27;: &#x27;New York&#x27;, &#x27;postal_code&#x27;: &#x27;TBD&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;longitude&#x27;: None, &#x27;latitude&#x27;: None, &#x27;phone&#x27;: &#x27;&#x27;, &#x27;website_url&#x27;: &#x27;&#x27;, &#x27;updated_at&#x27;: &#x27;2018-08-11T21:38:31.263Z&#x27;, &#x27;tag_list&#x27;: []}</span><br/><span class="error">E             </span><br/><span class="error">E           assert not {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:95: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_name=craft_brewerybreweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f627d41d0&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_responses_data_not_empty(self, response):<br/>        &quot;&quot;&quot;check responses is not empty&quot;&quot;&quot;<br/>    <br/>&gt;       assert response.json()<br/><span class="error">E       assert []</span><br/><span class="error">E        +  where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +    where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:83: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_name=craft_brewerybreweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f627d2eb8&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_response_autocomplete_count_items(self, response):<br/>        &quot;&quot;&quot;the number of returned items does not exceed 15&quot;&quot;&quot;<br/>    <br/>&gt;       assert 0 &lt; len(response.json()) &lt;= 20<br/><span class="error">E       assert 0 &lt; 0</span><br/><span class="error">E        +  where 0 = len([])</span><br/><span class="error">E        +    where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +      where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:88: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f62821b00&gt;, response = &lt;Response [200]&gt;<br/>fields_validator = &lt;BrewerySchema(many=False)&gt;<br/><br/>    def test_responses_format(self, response, fields_validator):<br/>        &quot;&quot;&quot;check responses format&quot;&quot;&quot;<br/>    <br/>        for brewery_data in response.json():<br/>            errors = fields_validator.validate(brewery_data)<br/>&gt;           assert not errors, f&#x27;Data format error: {errors}\nData: {brewery_data}\n&#x27;<br/><span class="error">E           AssertionError: Data format error: {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><span class="error">E             Data: {&#x27;id&#x27;: 4631, &#x27;name&#x27;: &#x27;Brewery in Planning - New York&#x27;, &#x27;brewery_type&#x27;: &#x27;planning&#x27;, &#x27;street&#x27;: &#x27;&#x27;, &#x27;city&#x27;: &#x27;New York&#x27;, &#x27;state&#x27;: &#x27;New York&#x27;, &#x27;postal_code&#x27;: &#x27;TBD&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;longitude&#x27;: None, &#x27;latitude&#x27;: None, &#x27;phone&#x27;: &#x27;&#x27;, &#x27;website_url&#x27;: &#x27;&#x27;, &#x27;updated_at&#x27;: &#x27;2018-08-11T21:38:31.263Z&#x27;, &#x27;tag_list&#x27;: []}</span><br/><span class="error">E             </span><br/><span class="error">E           assert not {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:95: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_tags=patio,dog-friendly]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f62751898&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_responses_data_not_empty(self, response):<br/>        &quot;&quot;&quot;check responses is not empty&quot;&quot;&quot;<br/>    <br/>&gt;       assert response.json()<br/><span class="error">E       assert []</span><br/><span class="error">E        +  where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +    where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:83: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_tags=patio,dog-friendly]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f62760dd8&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_response_autocomplete_count_items(self, response):<br/>        &quot;&quot;&quot;the number of returned items does not exceed 15&quot;&quot;&quot;<br/>    <br/>&gt;       assert 0 &lt; len(response.json()) &lt;= 20<br/><span class="error">E       assert 0 &lt; 0</span><br/><span class="error">E        +  where 0 = len([])</span><br/><span class="error">E        +    where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +      where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:88: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f62769c88&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_response_autocomplete_count_items(self, response):<br/>        &quot;&quot;&quot;the number of returned items does not exceed 15&quot;&quot;&quot;<br/>    <br/>&gt;       assert 0 &lt; len(response.json()) &lt;= 20<br/><span class="error">E       AssertionError: assert 25 &lt;= 20</span><br/><span class="error">E        +  where 25 = len([{&#x27;brewery_type&#x27;: &#x27;micro&#x27;, &#x27;city&#x27;: &#x27;Birmingham&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;id&#x27;: 2, ...}, {&#x27;brewery_type&#x27;: &#x27;micro&#x27;, ...d States&#x27;, &#x27;id&#x27;: 76, ...}, {&#x27;brewery_type&#x27;: &#x27;micro&#x27;, &#x27;city&#x27;: &#x27;Tucson&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;id&#x27;: 94, ...}, ...])</span><br/><span class="error">E        +    where [{&#x27;brewery_type&#x27;: &#x27;micro&#x27;, &#x27;city&#x27;: &#x27;Birmingham&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;id&#x27;: 2, ...}, {&#x27;brewery_type&#x27;: &#x27;micro&#x27;, ...d States&#x27;, &#x27;id&#x27;: 76, ...}, {&#x27;brewery_type&#x27;: &#x27;micro&#x27;, &#x27;city&#x27;: &#x27;Tucson&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;id&#x27;: 94, ...}, ...] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +      where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:88: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_state=new%20york&amp;sort=+id]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestListResponse object at 0x7f1f6271c320&gt;, response = &lt;Response [200]&gt;<br/>fields_validator = &lt;BrewerySchema(many=False)&gt;<br/><br/>    def test_responses_format(self, response, fields_validator):<br/>        &quot;&quot;&quot;check responses format&quot;&quot;&quot;<br/>    <br/>        for brewery_data in response.json():<br/>            errors = fields_validator.validate(brewery_data)<br/>&gt;           assert not errors, f&#x27;Data format error: {errors}\nData: {brewery_data}\n&#x27;<br/><span class="error">E           AssertionError: Data format error: {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><span class="error">E             Data: {&#x27;id&#x27;: 4676, &#x27;name&#x27;: &#x27;Copper City Brewing Company&#x27;, &#x27;brewery_type&#x27;: &#x27;micro&#x27;, &#x27;street&#x27;: &#x27;1111 Oneida St&#x27;, &#x27;city&#x27;: &#x27;Rome&#x27;, &#x27;state&#x27;: &#x27;New York&#x27;, &#x27;postal_code&#x27;: &#x27;13440-&#x27;, &#x27;country&#x27;: &#x27;United States&#x27;, &#x27;longitude&#x27;: &#x27;-75.4322995118866&#x27;, &#x27;latitude&#x27;: &#x27;43.2052133836803&#x27;, &#x27;phone&#x27;: &#x27;3152818987&#x27;, &#x27;website_url&#x27;: &#x27;http://www.coppercitybrewing.com&#x27;, &#x27;updated_at&#x27;: &#x27;2018-08-24T15:38:35.002Z&#x27;, &#x27;tag_list&#x27;: []}</span><br/><span class="error">E             </span><br/><span class="error">E           assert not {&#x27;postal_code&#x27;: [&#x27;String does not match expected pattern.&#x27;]}</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:95: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_data_not_empty[breweries/autocomplete?query=company_brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestAutocompleteResponse object at 0x7f1f626efa58&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_responses_data_not_empty(self, response):<br/>        &quot;&quot;&quot;check that the content of the response is not empty&quot;&quot;&quot;<br/>    <br/>&gt;       assert response.json()<br/><span class="error">E       assert []</span><br/><span class="error">E        +  where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +    where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:190: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_autocomplete_count_items[breweries/autocomplete?query=company_brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_api_base.TestAutocompleteResponse object at 0x7f1f626819b0&gt;, response = &lt;Response [200]&gt;<br/><br/>    def test_response_autocomplete_count_items(self, response):<br/>        &quot;&quot;&quot;the number of returned items does not exceed 15&quot;&quot;&quot;<br/>    <br/>&gt;       assert 0 &lt; len(response.json()) &lt;= 15<br/><span class="error">E       assert 0 &lt; 0</span><br/><span class="error">E        +  where 0 = len([])</span><br/><span class="error">E        +    where [] = &lt;bound method Response.json of &lt;Response [200]&gt;&gt;()</span><br/><span class="error">E        +      where &lt;bound method Response.json of &lt;Response [200]&gt;&gt; = &lt;Response [200]&gt;.json</span><br/><br/>openbrewerydb_api_tests/tests/test_api_base.py:195: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_city=portland]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_city=portland]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_city=portland]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_city=portland]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_city=portland]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_city=san_diego]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_city=new%20york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_city=new%20york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_city=new%20york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_city=new%20york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_name=cooper]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_name=craft_brewerybreweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_name=craft_brewerybreweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_name=craft_brewerybreweries?by_name=modern%20times]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_state=ohio]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_name=new_york]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_name=new%20mexico]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_postal=44107]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_postal=04103-1072]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_postal=04103-1072]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_postal=04103-1072]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_postal=04103-1072]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_postal=04103-1072]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_postal=95112_5932]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_postal=95112_5932]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_postal=95112_5932]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_postal=95112_5932]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_postal=95112_5932]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_type=micro]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_type=micro]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_tag=patio]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_tags=patio,dog-friendly]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_tags=patio,dog-friendly]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_tags=patio,dog-friendly]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?page=15]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?page=15]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?per_page=25]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?per_page=25]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_state=ohio&amp;sort=type]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_state=ohio&amp;sort=type]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_state=ohio&amp;sort=type]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_state=ohio&amp;sort=type]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_state=ohio&amp;sort=type]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_state=ohio&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_state=ohio&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_state=ohio&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_state=ohio&amp;sort=-name]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_format[breweries?by_state=ohio&amp;sort=-name]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_code[breweries?by_state=new%20york&amp;sort=+id]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_headers_content_type[breweries?by_state=new%20york&amp;sort=+id]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_responses_data_not_empty[breweries?by_state=new%20york&amp;sort=+id]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestListResponse::test_response_autocomplete_count_items[breweries?by_state=new%20york&amp;sort=+id]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_response_code[breweries/1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_headers_content_type[breweries/1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_data_not_empty[breweries/1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_format[breweries/1]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_response_code[breweries/3417]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_headers_content_type[breweries/3417]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_data_not_empty[breweries/3417]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_format[breweries/3417]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_response_code[breweries/8000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_headers_content_type[breweries/8000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_data_not_empty[breweries/8000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestGetResponse::test_responses_format[breweries/8000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_response_code[breweries/search?query=dog]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_headers_content_type[breweries/search?query=dog]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_data_not_empty[breweries/search?query=dog]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_format[breweries/search?query=dog]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_response_code[breweries/search?query=red_bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_headers_content_type[breweries/search?query=red_bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_data_not_empty[breweries/search?query=red_bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_format[breweries/search?query=red_bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_response_code[breweries/search?query=red%20bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_headers_content_type[breweries/search?query=red%20bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_data_not_empty[breweries/search?query=red%20bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestSearchResponse::test_responses_format[breweries/search?query=red%20bank]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_code[breweries/autocomplete?query=texas]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_headers_content_type[breweries/autocomplete?query=texas]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_data_not_empty[breweries/autocomplete?query=texas]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_autocomplete_count_items[breweries/autocomplete?query=texas]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_format[breweries/autocomplete?query=texas]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_code[breweries/autocomplete?query=company%20brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_headers_content_type[breweries/autocomplete?query=company%20brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_data_not_empty[breweries/autocomplete?query=company%20brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_autocomplete_count_items[breweries/autocomplete?query=company%20brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_format[breweries/autocomplete?query=company%20brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_response_code[breweries/autocomplete?query=company_brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_headers_content_type[breweries/autocomplete?query=company_brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestAutocompleteResponse::test_responses_format[breweries/autocomplete?query=company_brewery]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/not_exist]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/not_exist]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/not_exist]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/not_exist]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/9999999999]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/9999999999]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/9999999999]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/9999999999]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/_]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/_]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/_]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/_]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/-20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/-20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/-20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/-20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/0]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_response_code[breweries/%20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_headers_content_type[breweries/%20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_data_not_empty[breweries/%20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">openbrewerydb_api_tests/tests/test_api_base.py::TestRequestWithMessageErrors::test_responses_format[breweries/%20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>
