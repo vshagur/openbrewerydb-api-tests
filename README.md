@@ -1,4 +1,8 @@
 # openbrewerydb-api-tests
+
+![](https://img.shields.io/static/v1?label=Dependencies&message=Pytest==5.4.1&color=green) ![](https://img.shields.io/static/v1?label=Dependencies&message=marshmallow==3.5.1&color=green) ![](https://img.shields.io/static/v1?label=Dependencies&message=pytest-html==2.1.1&color=green) ![](https://img.shields.io/static/v1?label=Dependencies&message=requests==2.23.0&color=green)
+
+
 Test suite for Open Brewery DB API (https://www.openbrewerydb.org/).
 
 ## Table of contents
