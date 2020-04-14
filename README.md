@@ -75,7 +75,13 @@ The test suite checks API sorting functionality.
 Check API completion capabilities.
 
     $ python -m pytest --html=report.html  --url="https://api.openbrewerydb.org/" --delay=0.1 openbrewerydb_api_tests/tests/test_api_autocomplete.py
+
+#### Run all tests.
+To run all test suites with saving test reports in html files, you can use the run_tests.sh script
+
+    $ ./run_tests.sh
     
+
 ## Authors
 
 * **Valeriy Shagur**  - [vshagur](https://github.com/vshagur), email: vshagur@gmail.com
